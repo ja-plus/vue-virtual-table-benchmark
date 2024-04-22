@@ -1,0 +1,6 @@
+body{
+  user-select: none;
+}
+:fullscreen{
+  background-color: yellow;
+}
