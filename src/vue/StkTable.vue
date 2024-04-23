@@ -1,6 +1,14 @@
 <template>
   <div>
-    <StkTable row-key="id" style="height: 600px" virtual virtual-x fixed-col-shadow :columns="tableColumns" :data-source="tableData"></StkTable>
+    <StkTable
+      row-key="id"
+      style="height: 600px"
+      virtual
+      virtual-x
+      fixed-col-shadow
+      :columns="tableColumns"
+      :data-source="tableData"
+    ></StkTable>
   </div>
 </template>
 
