@@ -50,6 +50,7 @@
     "react-dom": "^18.2.0",
     "solid-js": "^1.8.16",
     "stk-table-vue": "^0.3.6",
+    "tdesign-vue-next": "^1.9.4",
     "vue": "^3.4.23",
     "vue-eslint-parser": "^9.4.2",
     "vxe-table": "^4.6.0",

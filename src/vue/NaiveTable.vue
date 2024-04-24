@@ -4,6 +4,8 @@
     <ul>
       <li>不支持直接设置行高。css设置。</li>
       <li>不支持横向虚拟滚动</li>
+      <li>*滚动无白屏</li>
+      <li>右固定列无阴影。</li>
     </ul>
     <NDataTable
       size="small"
@@ -14,7 +16,8 @@
       :max-height="600"
       :columns="columns"
       :data="tableData"
-    ></NDataTable>
+    >
+    </NDataTable>
   </div>
 </template>
 

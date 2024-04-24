@@ -4,6 +4,7 @@ import VxeTable from './VxeTable.vue';
 import NaiveTable from './NaiveTable.vue';
 import ElementTable from './ElementTable.vue';
 import ArcoTable from './ArcoTable.vue';
+import TDesignTable from './TDesignTable.vue';
 </script>
 
 <template>
@@ -14,6 +15,7 @@ import ArcoTable from './ArcoTable.vue';
     <NaiveTable></NaiveTable>
     <ElementTable></ElementTable>
     <ArcoTable></ArcoTable>
+    <TDesignTable></TDesignTable>
     <div>
       <h2>ant-design-vue table</h2>
       <ul>

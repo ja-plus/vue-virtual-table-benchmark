@@ -9,6 +9,7 @@
       >
     </h2>
     <ul>
+      <li>fixed right 覆盖fixed left</li>
       <li>虚拟列表不支持固定列</li>
       <li>同antdv 要配置scroll x</li>
       <li>要配置可视区高度</li>
@@ -21,6 +22,7 @@
       :columns="columns"
       :data="tableData"
       :pagination="false"
+      :bordered="{ cell: true }"
       :virtual-list-props="{ height: 600 }"
       :scroll="{ x: 1000 }"
     ></Table>

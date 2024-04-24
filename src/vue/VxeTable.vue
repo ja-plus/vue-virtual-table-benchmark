@@ -8,7 +8,7 @@
       :height="600"
       :scroll-y="{ enabled: true }"
       :scroll-x="{ enabled: true, gt: 0 }"
-      :row-config="{ height: 28 }"
+      :row-config="{ height: 28, isHover: true }"
     >
       <vxe-column
         v-for="column in tableColumns"
