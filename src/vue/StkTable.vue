@@ -1,5 +1,6 @@
 <template>
   <div>
+    <h2>stk table vue</h2>
     <StkTable
       row-key="id"
       style="height: 600px"

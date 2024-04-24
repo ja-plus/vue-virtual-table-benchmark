@@ -1,5 +1,6 @@
 <template>
   <div>
+    <h2>vxe-table</h2>
     <vxe-table
       id="id"
       border

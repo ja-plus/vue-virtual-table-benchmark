@@ -1,8 +1,16 @@
 <template>
   <div>
+    <h2>naive ui table</h2>
+    <ul>
+      <li>不支持直接设置行高。css设置。</li>
+      <li>不支持横向虚拟滚动</li>
+    </ul>
     <NDataTable
-      style="height: 600px"
+      size="small"
       virtual-scroll
+      :bordered="false"
+      :single-line="false"
+      :row-key="it => it.id"
       :max-height="600"
       :columns="columns"
       :data="tableData"
@@ -12,8 +20,8 @@
 
 <script setup>
 import { NDataTable } from 'naive-ui';
-import { tableData, tableColumns } from '../stk-table/props.js';
 import { computed } from 'vue';
+import { tableColumns, tableData } from '../stk-table/props.js';
 
 const columns = computed(() =>
   tableColumns.map(it => ({
@@ -26,3 +34,8 @@ const columns = computed(() =>
   })),
 );
 </script>
+<style lang="less">
+.n-data-table {
+  --n-td-padding: 3px 8px !important;
+}
+</style>
