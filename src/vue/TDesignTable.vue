@@ -25,7 +25,7 @@
   </div>
 </template>
 <script setup>
-import { Table } from 'tdesign-vue-next';
+import { Table } from 'tdesign-vue-next/esm/table/index.js';
 import { computed } from 'vue';
 import { tableColumns, tableData } from '../stk-table/props.js';
 

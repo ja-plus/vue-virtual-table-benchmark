@@ -22,7 +22,7 @@
 </template>
 
 <script setup>
-import { NDataTable } from 'naive-ui';
+import { NDataTable } from 'naive-ui/es/data-table/index.mjs';
 import { computed } from 'vue';
 import { tableColumns, tableData } from '../stk-table/props.js';
 

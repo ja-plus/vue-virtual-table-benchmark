@@ -18,7 +18,10 @@
 </template>
 
 <script setup>
-import { TableV2, TableV2FixedDir } from 'element-plus';
+import {
+  TableV2,
+  TableV2FixedDir,
+} from 'element-plus/es/components/table-v2/index.mjs';
 import { computed } from 'vue';
 import { tableColumns, tableData } from '../stk-table/props.js';
 import 'element-plus/theme-chalk/index.css';

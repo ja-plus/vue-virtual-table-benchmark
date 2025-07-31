@@ -19,13 +19,12 @@ module.exports =
         directory: path.join(__dirname, 'public'),
       },
       compress: true,
-      port: 8081,
       open: true,
     },
     resolve: {
-      extensions: ['.js', '.ts', '.json'], // 解析扩展。（当我们通过路导入文件，找不到改文件时，会尝试加入这些后缀继续寻找文件）
+      extensions: ['...', '.ts', '.json'], // 解析扩展。（当我们通过路导入文件，找不到改文件时，会尝试加入这些后缀继续寻找文件）
       alias: {
-        '@': path.join(__dirname, '..', 'src'), // 在项目中使用@符号代替src路径，导入文件路径更方便
+        '@': path.join(__dirname, 'src'), // 在项目中使用@符号代替src路径，导入文件路径更方便
       },
     },
     module: {
@@ -36,10 +35,10 @@ module.exports =
           loader: 'babel-loader', // loader的名称（必须）
         },
         {
-          test: /\.(t|j)s$/,
-          exclude: /node_modules/,
+          test: /\.m?(t|j)s$/,
+          // exclude: /node_modules/,
           // loader: 'ts-loader',
-          loader: 'swc-loader',
+          loader: 'builtin:swc-loader',
         },
         {
           test: /lit[\\/].*\.ts$/,

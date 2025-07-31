@@ -29,11 +29,11 @@
   </div>
 </template>
 <script setup>
-import { Table } from '@arco-design/web-vue';
+import Table from '@arco-design/web-vue/es/table/index.js';
 import { computed } from 'vue';
 import { tableColumns, tableData } from '../stk-table/props.js';
 
-import '@arco-design/web-vue/dist/arco.css';
+import '@arco-design/web-vue/es/table/style/index.js';
 
 const columns = computed(() =>
   tableColumns.map(it => ({
