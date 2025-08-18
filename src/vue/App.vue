@@ -5,6 +5,7 @@ import NaiveTable from './NaiveTable.vue';
 import ElementTable from './ElementTable.vue';
 import ArcoTable from './ArcoTable.vue';
 import TDesignTable from './TDesignTable.vue';
+import VTable from './VTable.vue';
 </script>
 
 <template>
@@ -53,6 +54,10 @@ import TDesignTable from './TDesignTable.vue';
           >滚动效果不好
         </li>
       </ul>
+    </div>
+    <div>
+      <h2>VTable</h2>
+      <VTable></VTable>
     </div>
   </div>
 </template>
