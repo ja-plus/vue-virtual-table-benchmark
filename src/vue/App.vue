@@ -57,6 +57,7 @@ import VTable from './VTable.vue';
     </div>
     <div>
       <h2>VTable</h2>
+      <p> 提示：与StkTable 同比性能时要移除上面其他表格。页面元素过多会影响表格滚动性能。</p>
       <VTable></VTable>
     </div>
   </div>
