@@ -2,18 +2,19 @@
   <div>
     <h2>element-plus table</h2>
     <ul>
-      <li>固定列用不了</li>
-      <li>需要设置宽度</li>
+      <li>需要设置高度，宽度且不能用百分比</li>
     </ul>
-    <TableV2
-      row-key="id"
-      fixed
-      :height="600"
-      :max-height="600"
-      :width="800"
-      :columns
-      :data="tableData"
-    ></TableV2>
+    <div style="width:100%">
+      <TableV2
+        row-key="id"
+        fixed
+        :height="600"
+        :max-height="600"
+        :width="800"
+        :columns
+        :data="tableData"
+      ></TableV2>
+    </div>
   </div>
 </template>
 
@@ -35,9 +36,9 @@ const columns = computed(() =>
     dataKey: it.dataIndex,
     title: it.title,
     width: it.width,
-    // fixed: fixedMap[it.fixed],
-    // align: it.align,
-    // titleAlign: it.headerAlign,
+    fixed: fixedMap[it.fixed],
+    align: it.align,
+    titleAlign: it.headerAlign,
   })),
 );
 // Your script code here
