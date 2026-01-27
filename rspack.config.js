@@ -1,7 +1,7 @@
 const path = require('path');
 const { VueLoaderPlugin } = require('vue-loader');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
-const BundleAnalyzer = require('webpack-bundle-analyzer').BundleAnalyzerPlugin;
+// const BundleAnalyzer = require('webpack-bundle-analyzer').BundleAnalyzerPlugin;
 // const SpeedMeasurePlugin = require('speed-measure-webpack-plugin');
 // const smp = new SpeedMeasurePlugin();
 
@@ -75,7 +75,7 @@ module.exports =
           removeAttributeQuotes: true, // 去除属性 标签的 引号  例如 <p id="test" /> 输出 <p id=test/>
         },
       }),
-      new BundleAnalyzer(),
+      // new BundleAnalyzer(),
     ],
   };
 /* ); */

@@ -1,11 +1,12 @@
 <script setup>
 import StkTable from './StkTable.vue';
 import VxeTable from './VxeTable.vue';
-import NaiveTable from './NaiveTable.vue';
-import ElementTable from './ElementTable.vue';
-import ArcoTable from './ArcoTable.vue';
-import TDesignTable from './TDesignTable.vue';
+// import NaiveTable from './NaiveTable.vue';
+// import ElementTable from './ElementTable.vue';
+// import ArcoTable from './ArcoTable.vue';
+// import TDesignTable from './TDesignTable.vue';
 import VTable from './VTable.vue';
+import AgGrid from './AgGrid.vue';
 </script>
 
 <template>
@@ -13,10 +14,10 @@ import VTable from './VTable.vue';
     <h2>Vue3 App</h2>
     <StkTable></StkTable>
     <VxeTable></VxeTable>
-    <NaiveTable></NaiveTable>
-    <ElementTable></ElementTable>
-    <ArcoTable></ArcoTable>
-    <TDesignTable></TDesignTable>
+    <!-- <NaiveTable></NaiveTable> -->
+    <!-- <ElementTable></ElementTable> -->
+    <!-- <ArcoTable></ArcoTable> -->
+    <!-- <TDesignTable></TDesignTable> -->
     <div>
       <h2>ant-design-vue table</h2>
       <ul>
@@ -57,8 +58,12 @@ import VTable from './VTable.vue';
     </div>
     <div>
       <h2>VTable</h2>
-      <p> 提示：与StkTable 同比性能时要移除上面其他表格。页面元素过多会影响表格滚动性能。</p>
+      <p>
+        提示：与StkTable
+        同比性能时要移除上面其他表格。页面元素过多会影响表格滚动性能。
+      </p>
       <VTable></VTable>
     </div>
+    <AgGrid></AgGrid>
   </div>
 </template>
