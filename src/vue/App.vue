@@ -7,6 +7,7 @@ import VxeTable from './VxeTable.vue';
 // import TDesignTable from './TDesignTable.vue';
 import VTable from './VTable.vue';
 import AgGrid from './AgGrid.vue';
+import TanStackTable from './TanStackTable.vue';
 </script>
 
 <template>
@@ -65,5 +66,6 @@ import AgGrid from './AgGrid.vue';
       <VTable></VTable>
     </div>
     <AgGrid></AgGrid>
+    <TanStackTable></TanStackTable>
   </div>
 </template>
