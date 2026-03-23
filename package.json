@@ -14,6 +14,7 @@
     "@rspack/cli": "^1.4.11",
     "@rspack/core": "^1.4.11",
     "@tanstack/vue-table": "^8.21.3",
+    "@tanstack/vue-virtual": "^3.13.23",
     "@visactor/vtable": "^1.19.6",
     "ag-grid-community": "^35.0.1",
     "ag-grid-vue3": "^35.0.1",

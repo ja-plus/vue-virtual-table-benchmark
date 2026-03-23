@@ -1,7 +1,11 @@
 <template>
   <div>
-    <h2>TanStack Table Vue</h2>
-    <div style="height: 600px; width: 100%; overflow: auto">
+    <h2>TanStack Table Vue (Virtual Scrolling)</h2>
+    <div
+      ref="tableContainer"
+      style="height: 600px; width: 100%; overflow: auto"
+      @scroll="handleScroll"
+    >
       <table style="width: 100%; border-collapse: collapse">
         <thead style="position: sticky; top: 0; z-index: 2">
           <tr
@@ -41,8 +45,12 @@
           </tr>
         </thead>
         <tbody>
+          <!-- Top spacer -->
+          <tr :style="{ height: virtualScroll.offsetTop + 'px' }"></tr>
+
+          <!-- Visible rows -->
           <tr
-            v-for="row in table.getRowModel().rows"
+            v-for="row in visibleRows"
             :key="row.id"
             :style="{ height: '28px' }"
           >
@@ -74,6 +82,9 @@
               />
             </td>
           </tr>
+
+          <!-- Bottom spacer -->
+          <tr :style="{ height: virtualScroll.offsetBottom + 'px' }"></tr>
         </tbody>
       </table>
     </div>
@@ -81,7 +92,7 @@
 </template>
 
 <script setup>
-import { computed } from 'vue';
+import { ref, computed, onMounted, watch } from 'vue';
 import {
   useVueTable,
   FlexRender,
@@ -89,6 +100,20 @@ import {
   getSortedRowModel,
 } from '@tanstack/vue-table';
 import { tableColumns, tableData } from '../stk-table/props.js';
+
+// Refs
+const tableContainer = ref(null);
+
+// Virtual scroll state
+const virtualScroll = ref({
+  containerHeight: 600,
+  startIndex: 0,
+  endIndex: 0,
+  rowHeight: 28,
+  offsetTop: 0,
+  offsetBottom: 0,
+  pageSize: 0,
+});
 
 const data = computed(() => tableData);
 
@@ -127,5 +152,61 @@ const table = useVueTable({
   getCoreRowModel: getCoreRowModel(),
   getSortedRowModel: getSortedRowModel(),
   enableColumnPinning: true,
+});
+
+// Computed visible rows
+const visibleRows = computed(() => {
+  const allRows = table.getRowModel().rows;
+  return allRows.slice(
+    virtualScroll.value.startIndex,
+    virtualScroll.value.endIndex,
+  );
+});
+
+// Initialize virtual scroll
+const initVirtualScroll = () => {
+  if (!tableContainer.value) return;
+
+  const containerHeight = tableContainer.value.clientHeight;
+  const pageSize =
+    Math.ceil(containerHeight / virtualScroll.value.rowHeight) + 2; // +2 for buffer
+
+  virtualScroll.value.containerHeight = containerHeight;
+  virtualScroll.value.pageSize = pageSize;
+  virtualScroll.value.endIndex = Math.min(pageSize, data.value.length);
+  virtualScroll.value.offsetBottom =
+    (data.value.length - virtualScroll.value.endIndex) *
+    virtualScroll.value.rowHeight;
+};
+
+// Handle scroll event
+const handleScroll = e => {
+  if (!e.target) return;
+
+  const scrollTop = e.target.scrollTop;
+  const startIndex = Math.floor(scrollTop / virtualScroll.value.rowHeight);
+  const endIndex = Math.min(
+    startIndex + virtualScroll.value.pageSize,
+    data.value.length,
+  );
+
+  virtualScroll.value.startIndex = startIndex;
+  virtualScroll.value.endIndex = endIndex;
+  virtualScroll.value.offsetTop = startIndex * virtualScroll.value.rowHeight;
+  virtualScroll.value.offsetBottom =
+    (data.value.length - endIndex) * virtualScroll.value.rowHeight;
+};
+
+// Watch for data changes
+watch(data, () => {
+  initVirtualScroll();
+});
+
+// Initialize on mount
+onMounted(() => {
+  // Wait for next tick to ensure DOM is ready
+  setTimeout(() => {
+    initVirtualScroll();
+  }, 0);
 });
 </script>
