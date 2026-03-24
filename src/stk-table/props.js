@@ -58,6 +58,15 @@ export const tableColumns = [
     width: 100,
     customCell,
   },
+
+  ...new Array(10).fill(0).map((it, i) => {
+    return {
+      title: 'other' + i,
+      dataIndex: 'other' + i,
+      width: 100,
+      customCell,
+    };
+  }),
   {
     dataIndex: 'R',
     title: 'R',
@@ -72,14 +81,6 @@ export const tableColumns = [
     fixed: 'right',
     customCell,
   },
-  ...new Array(10).fill(0).map((it, i) => {
-    return {
-      title: 'other' + i,
-      dataIndex: 'other' + i,
-      width: 100,
-      customCell,
-    };
-  }),
 ];
 export const tableData = new Array(1000).fill(0).map((it, i) => {
   return {

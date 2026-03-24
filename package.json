@@ -5,7 +5,8 @@
   "main": "index.js",
   "scripts": {
     "dev": "rspack dev",
-    "build": "rspack build"
+    "build": "rspack build",
+    "analyze": "rspack build --analyze"
   },
   "author": "",
   "license": "ISC",
@@ -27,7 +28,7 @@
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "solid-js": "^1.8.22",
-    "stk-table-vue": "0.9.0",
+    "stk-table-vue": "0.11.6",
     "tdesign-vue-next": "1.15.2",
     "vue": "^3.4.23",
     "vue-eslint-parser": "^9.4.2",
