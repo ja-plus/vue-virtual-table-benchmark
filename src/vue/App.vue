@@ -5,7 +5,7 @@ import { defineAsyncComponent, shallowRef } from 'vue';
 const tabs = [
   {
     key: 'stk-table',
-    label: 'StkTable',
+    label: 'stk-table-vue',
     comp: defineAsyncComponent(() => import('./StkTable.vue')),
   },
   {
@@ -35,23 +35,23 @@ const tabs = [
   },
   {
     key: 'antdv-table',
-    label: 'ant-design-vue',
+    label: 'ant-design-vue(surely-vue)',
     comp: defineAsyncComponent(() => import('./AntdvTable.vue')),
   },
   { key: 'vuetify-table', label: 'vuetify' },
   {
     key: 'vtable',
-    label: 'VTable',
+    label: 'v-table',
     comp: defineAsyncComponent(() => import('./VTable.vue')),
   },
   {
     key: 'ag-grid',
-    label: 'AgGrid',
+    label: 'ag-grid',
     comp: defineAsyncComponent(() => import('./AgGrid.vue')),
   },
   {
     key: 'tanstack-table',
-    label: 'TanStack Table',
+    label: 'tanstack-table',
     comp: defineAsyncComponent(() => import('./TanStackTable.vue')),
   },
 ];

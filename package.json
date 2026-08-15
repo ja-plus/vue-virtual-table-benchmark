@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "rspack dev",
     "build": "rspack build",
-    "analyze": "rspack build --analyze"
+    "analyze": "rspack build --analyze",
+    "perf": "node perf/run-perf.mjs"
   },
   "author": "",
   "license": "ISC",
