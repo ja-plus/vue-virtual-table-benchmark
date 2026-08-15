@@ -24,15 +24,17 @@
     box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
   }
   /* ---- 雷达图区 ---- */
-  .radar-wrap { display: flex; gap: 16px; align-items: stretch; flex-wrap: wrap; }
-  #radar { flex: 1; min-width: 420px; height: 440px; }
+  .radar-wrap { display: flex; gap: 16px; align-items: flex-start; flex-wrap: wrap; }
+  .radar-main { flex: 1; min-width: 420px; }
+  #radar { width: 100%; height: 440px; }
   .radar-side { width: 260px; display: flex; flex-direction: column; }
   .radar-current {
     font-size: 22px;
     font-weight: bold;
     margin-bottom: 4px;
     transition: color 0.3s;
-    height: 60px;
+    display: flex;
+    height: 32px;
   }
   .radar-hint { font-size: 12px; color: #aaa; margin-bottom: 12px; }
   .pause-badge {
@@ -94,9 +96,11 @@
 
   <h2>综合评分雷达图</h2>
   <div class="card radar-wrap">
-    <div id="radar"></div>
-    <div class="radar-side">
+    <div class="radar-main">
       <div class="radar-current" id="radarTitle">-</div>
+      <div id="radar"></div>
+    </div>
+    <div class="radar-side">
       <div class="radar-hint">每 2s 自动切换，鼠标悬浮左侧图例可暂停</div>
       <div class="pause-badge" id="pauseBadge">⏸ 已暂停（移开鼠标恢复）</div>
       <div id="legend"></div>
@@ -121,9 +125,9 @@
 
 <script>
   /* global echarts */
-  // [{"table":"stk-table-vue","renderMs":311,"firstPaintMs":65,"domNodes":847,"renderLongTaskMs":0,"scrollMethod":"scroll","scrolledPx":27352,"avgFps":42.8,"lowFps1pct":20,"p99FrameMs":50,"worstFrameMs":50,"droppedFrames":15,"scrollLongTaskMs":52,"heapDeltaMB":-2.6,"timeout":false},{"table":"vxe-table","renderMs":960,"firstPaintMs":0,"domNodes":2453,"renderLongTaskMs":581,"scrollMethod":"scroll","scrolledPx":27374,"avgFps":35.5,"lowFps1pct":6,"p99FrameMs":166.6,"worstFrameMs":166.6,"droppedFrames":13,"scrollLongTaskMs":543,"heapDeltaMB":8.1,"timeout":false},{"table":"naive-ui","renderMs":348,"firstPaintMs":60,"domNodes":638,"renderLongTaskMs":0,"scrollMethod":"scroll","scrolledPx":27388,"avgFps":59.5,"lowFps1pct":30,"p99FrameMs":16.8,"worstFrameMs":49.9,"droppedFrames":1,"scrollLongTaskMs":0,"heapDeltaMB":34.4,"timeout":false},{"table":"element-plus","renderMs":331,"firstPaintMs":51,"domNodes":1129,"renderLongTaskMs":0,"scrollMethod":"scroll","scrolledPx":27132,"avgFps":20.7,"lowFps1pct":12,"p99FrameMs":83.4,"worstFrameMs":83.4,"droppedFrames":66,"scrollLongTaskMs":1296,"heapDeltaMB":-16.2,"timeout":false},{"table":"arco-design","renderMs":393,"firstPaintMs":51,"domNodes":1946,"renderLongTaskMs":93,"scrollMethod":"scroll","scrolledPx":55457,"avgFps":10.1,"lowFps1pct":5,"p99FrameMs":200,"worstFrameMs":200,"droppedFrames":28,"scrollLongTaskMs":3914,"heapDeltaMB":30.2,"timeout":false},{"table":"tdesign","renderMs":489,"firstPaintMs":81,"domNodes":827,"renderLongTaskMs":56,"scrollMethod":"scroll","scrolledPx":26663,"avgFps":49.5,"lowFps1pct":20,"p99FrameMs":50.1,"worstFrameMs":50.1,"droppedFrames":10,"scrollLongTaskMs":52,"heapDeltaMB":-47.7,"timeout":false},{"table":"ant-design-vue(surely-vue)","renderMs":413,"firstPaintMs":52,"domNodes":1277,"renderLongTaskMs":101,"scrollMethod":"scroll","scrolledPx":27267,"avgFps":37.9,"lowFps1pct":15,"p99FrameMs":66.6,"worstFrameMs":66.6,"droppedFrames":31,"scrollLongTaskMs":102,"heapDeltaMB":8.1,"timeout":false},{"table":"v-table","renderMs":446,"firstPaintMs":0,"domNodes":26,"renderLongTaskMs":111,"scrollMethod":"wheel","scrolledPx":-1,"avgFps":59,"lowFps1pct":24,"p99FrameMs":33.3,"worstFrameMs":50,"droppedFrames":1,"scrollLongTaskMs":0,"heapDeltaMB":11.2,"timeout":false},{"table":"ag-grid","renderMs":388,"firstPaintMs":62,"domNodes":2122,"renderLongTaskMs":81,"scrollMethod":"scroll","scrolledPx":26914,"avgFps":19,"lowFps1pct":8.6,"p99FrameMs":116.8,"worstFrameMs":116.8,"droppedFrames":55,"scrollLongTaskMs":2659,"heapDeltaMB":17.5,"timeout":false},{"table":"tanstack-table","renderMs":332,"firstPaintMs":0,"domNodes":545,"renderLongTaskMs":0,"scrollMethod":"scroll","scrolledPx":27337,"avgFps":39.4,"lowFps1pct":12,"p99FrameMs":83.4,"worstFrameMs":83.4,"droppedFrames":26,"scrollLongTaskMs":76,"heapDeltaMB":-5.4,"timeout":false}] / {"time":"2026/8/15 19:30:31","scrollDuration":4000} 为占位符，由 run-perf.mjs 生成报告时替换为真实数据
-  var DATA = [{"table":"stk-table-vue","renderMs":311,"firstPaintMs":65,"domNodes":847,"renderLongTaskMs":0,"scrollMethod":"scroll","scrolledPx":27352,"avgFps":42.8,"lowFps1pct":20,"p99FrameMs":50,"worstFrameMs":50,"droppedFrames":15,"scrollLongTaskMs":52,"heapDeltaMB":-2.6,"timeout":false},{"table":"vxe-table","renderMs":960,"firstPaintMs":0,"domNodes":2453,"renderLongTaskMs":581,"scrollMethod":"scroll","scrolledPx":27374,"avgFps":35.5,"lowFps1pct":6,"p99FrameMs":166.6,"worstFrameMs":166.6,"droppedFrames":13,"scrollLongTaskMs":543,"heapDeltaMB":8.1,"timeout":false},{"table":"naive-ui","renderMs":348,"firstPaintMs":60,"domNodes":638,"renderLongTaskMs":0,"scrollMethod":"scroll","scrolledPx":27388,"avgFps":59.5,"lowFps1pct":30,"p99FrameMs":16.8,"worstFrameMs":49.9,"droppedFrames":1,"scrollLongTaskMs":0,"heapDeltaMB":34.4,"timeout":false},{"table":"element-plus","renderMs":331,"firstPaintMs":51,"domNodes":1129,"renderLongTaskMs":0,"scrollMethod":"scroll","scrolledPx":27132,"avgFps":20.7,"lowFps1pct":12,"p99FrameMs":83.4,"worstFrameMs":83.4,"droppedFrames":66,"scrollLongTaskMs":1296,"heapDeltaMB":-16.2,"timeout":false},{"table":"arco-design","renderMs":393,"firstPaintMs":51,"domNodes":1946,"renderLongTaskMs":93,"scrollMethod":"scroll","scrolledPx":55457,"avgFps":10.1,"lowFps1pct":5,"p99FrameMs":200,"worstFrameMs":200,"droppedFrames":28,"scrollLongTaskMs":3914,"heapDeltaMB":30.2,"timeout":false},{"table":"tdesign","renderMs":489,"firstPaintMs":81,"domNodes":827,"renderLongTaskMs":56,"scrollMethod":"scroll","scrolledPx":26663,"avgFps":49.5,"lowFps1pct":20,"p99FrameMs":50.1,"worstFrameMs":50.1,"droppedFrames":10,"scrollLongTaskMs":52,"heapDeltaMB":-47.7,"timeout":false},{"table":"ant-design-vue(surely-vue)","renderMs":413,"firstPaintMs":52,"domNodes":1277,"renderLongTaskMs":101,"scrollMethod":"scroll","scrolledPx":27267,"avgFps":37.9,"lowFps1pct":15,"p99FrameMs":66.6,"worstFrameMs":66.6,"droppedFrames":31,"scrollLongTaskMs":102,"heapDeltaMB":8.1,"timeout":false},{"table":"v-table","renderMs":446,"firstPaintMs":0,"domNodes":26,"renderLongTaskMs":111,"scrollMethod":"wheel","scrolledPx":-1,"avgFps":59,"lowFps1pct":24,"p99FrameMs":33.3,"worstFrameMs":50,"droppedFrames":1,"scrollLongTaskMs":0,"heapDeltaMB":11.2,"timeout":false},{"table":"ag-grid","renderMs":388,"firstPaintMs":62,"domNodes":2122,"renderLongTaskMs":81,"scrollMethod":"scroll","scrolledPx":26914,"avgFps":19,"lowFps1pct":8.6,"p99FrameMs":116.8,"worstFrameMs":116.8,"droppedFrames":55,"scrollLongTaskMs":2659,"heapDeltaMB":17.5,"timeout":false},{"table":"tanstack-table","renderMs":332,"firstPaintMs":0,"domNodes":545,"renderLongTaskMs":0,"scrollMethod":"scroll","scrolledPx":27337,"avgFps":39.4,"lowFps1pct":12,"p99FrameMs":83.4,"worstFrameMs":83.4,"droppedFrames":26,"scrollLongTaskMs":76,"heapDeltaMB":-5.4,"timeout":false}]; // eslint-disable-line
-  var META = {"time":"2026/8/15 19:30:31","scrollDuration":4000}; // eslint-disable-line
+  // [{"table":"stk-table-vue","renderMs":308,"firstPaintMs":0,"domNodes":847,"renderLongTaskMs":0,"scrollMethod":"scroll","scrolledPx":24790,"avgFps":60,"lowFps1pct":58.7,"p99FrameMs":17.1,"worstFrameMs":17.1,"droppedFrames":0,"scrollLongTaskMs":0,"heapDeltaMB":-49.3,"timeout":false},{"table":"vxe-table","renderMs":997,"firstPaintMs":0,"domNodes":2833,"renderLongTaskMs":661,"scrollMethod":"scroll","scrolledPx":10152,"avgFps":55.7,"lowFps1pct":29.9,"p99FrameMs":33.4,"worstFrameMs":33.5,"droppedFrames":8,"scrollLongTaskMs":0,"heapDeltaMB":79.1,"timeout":false},{"table":"naive-ui","renderMs":1012,"firstPaintMs":0,"domNodes":1218,"renderLongTaskMs":629,"scrollMethod":"scroll","scrolledPx":24790,"avgFps":59.3,"lowFps1pct":30,"p99FrameMs":33.4,"worstFrameMs":66.8,"droppedFrames":3,"scrollLongTaskMs":51,"heapDeltaMB":-57.1,"timeout":false},{"table":"element-plus","renderMs":362,"firstPaintMs":69,"domNodes":2049,"renderLongTaskMs":64,"scrollMethod":"scroll","scrolledPx":9650,"avgFps":51.7,"lowFps1pct":18,"p99FrameMs":50,"worstFrameMs":100,"droppedFrames":49,"scrollLongTaskMs":6015,"heapDeltaMB":-6.8,"timeout":false},{"table":"arco-design","renderMs":522,"firstPaintMs":0,"domNodes":3826,"renderLongTaskMs":180,"scrollMethod":"scroll","scrolledPx":24795,"avgFps":19.5,"lowFps1pct":4.3,"p99FrameMs":183.3,"worstFrameMs":316.4,"droppedFrames":74,"scrollLongTaskMs":20141,"heapDeltaMB":61.1,"timeout":false},{"table":"tdesign","renderMs":704,"firstPaintMs":53,"domNodes":1587,"renderLongTaskMs":169,"scrollMethod":"scroll","scrolledPx":24792,"avgFps":35.9,"lowFps1pct":11.3,"p99FrameMs":100.1,"worstFrameMs":133.3,"droppedFrames":100,"scrollLongTaskMs":13914,"heapDeltaMB":-35.2,"timeout":false},{"table":"ant-design-vue(surely-vue)","renderMs":474,"firstPaintMs":0,"domNodes":1277,"renderLongTaskMs":210,"scrollMethod":"scroll","scrolledPx":24809,"avgFps":59.8,"lowFps1pct":44.6,"p99FrameMs":17.2,"worstFrameMs":50,"droppedFrames":1,"scrollLongTaskMs":54,"heapDeltaMB":49.7,"timeout":false},{"table":"v-table","renderMs":534,"firstPaintMs":97,"domNodes":26,"renderLongTaskMs":222,"scrollMethod":"wheel","scrolledPx":0,"avgFps":24.1,"lowFps1pct":15,"p99FrameMs":83.4,"worstFrameMs":83.4,"droppedFrames":187,"scrollLongTaskMs":337,"heapDeltaMB":-66.1,"timeout":false},{"table":"ag-grid","renderMs":522,"firstPaintMs":52,"domNodes":2068,"renderLongTaskMs":250,"scrollMethod":"scroll","scrolledPx":24796,"avgFps":57.6,"lowFps1pct":22.5,"p99FrameMs":33.4,"worstFrameMs":83.3,"droppedFrames":6,"scrollLongTaskMs":390,"heapDeltaMB":26,"timeout":false},{"table":"tanstack-table","renderMs":399,"firstPaintMs":51,"domNodes":1004,"renderLongTaskMs":72,"scrollMethod":"scroll","scrolledPx":24795,"avgFps":37.2,"lowFps1pct":8.2,"p99FrameMs":66.7,"worstFrameMs":250,"droppedFrames":57,"scrollLongTaskMs":2421,"heapDeltaMB":197.4,"timeout":false}] / {"time":"2026/8/15 20:48:12","scrollDuration":12000} 为占位符，由 run-perf.mjs 生成报告时替换为真实数据
+  var DATA = [{"table":"stk-table-vue","renderMs":308,"firstPaintMs":0,"domNodes":847,"renderLongTaskMs":0,"scrollMethod":"scroll","scrolledPx":24790,"avgFps":60,"lowFps1pct":58.7,"p99FrameMs":17.1,"worstFrameMs":17.1,"droppedFrames":0,"scrollLongTaskMs":0,"heapDeltaMB":-49.3,"timeout":false},{"table":"vxe-table","renderMs":997,"firstPaintMs":0,"domNodes":2833,"renderLongTaskMs":661,"scrollMethod":"scroll","scrolledPx":10152,"avgFps":55.7,"lowFps1pct":29.9,"p99FrameMs":33.4,"worstFrameMs":33.5,"droppedFrames":8,"scrollLongTaskMs":0,"heapDeltaMB":79.1,"timeout":false},{"table":"naive-ui","renderMs":1012,"firstPaintMs":0,"domNodes":1218,"renderLongTaskMs":629,"scrollMethod":"scroll","scrolledPx":24790,"avgFps":59.3,"lowFps1pct":30,"p99FrameMs":33.4,"worstFrameMs":66.8,"droppedFrames":3,"scrollLongTaskMs":51,"heapDeltaMB":-57.1,"timeout":false},{"table":"element-plus","renderMs":362,"firstPaintMs":69,"domNodes":2049,"renderLongTaskMs":64,"scrollMethod":"scroll","scrolledPx":9650,"avgFps":51.7,"lowFps1pct":18,"p99FrameMs":50,"worstFrameMs":100,"droppedFrames":49,"scrollLongTaskMs":6015,"heapDeltaMB":-6.8,"timeout":false},{"table":"arco-design","renderMs":522,"firstPaintMs":0,"domNodes":3826,"renderLongTaskMs":180,"scrollMethod":"scroll","scrolledPx":24795,"avgFps":19.5,"lowFps1pct":4.3,"p99FrameMs":183.3,"worstFrameMs":316.4,"droppedFrames":74,"scrollLongTaskMs":20141,"heapDeltaMB":61.1,"timeout":false},{"table":"tdesign","renderMs":704,"firstPaintMs":53,"domNodes":1587,"renderLongTaskMs":169,"scrollMethod":"scroll","scrolledPx":24792,"avgFps":35.9,"lowFps1pct":11.3,"p99FrameMs":100.1,"worstFrameMs":133.3,"droppedFrames":100,"scrollLongTaskMs":13914,"heapDeltaMB":-35.2,"timeout":false},{"table":"ant-design-vue(surely-vue)","renderMs":474,"firstPaintMs":0,"domNodes":1277,"renderLongTaskMs":210,"scrollMethod":"scroll","scrolledPx":24809,"avgFps":59.8,"lowFps1pct":44.6,"p99FrameMs":17.2,"worstFrameMs":50,"droppedFrames":1,"scrollLongTaskMs":54,"heapDeltaMB":49.7,"timeout":false},{"table":"v-table","renderMs":534,"firstPaintMs":97,"domNodes":26,"renderLongTaskMs":222,"scrollMethod":"wheel","scrolledPx":0,"avgFps":24.1,"lowFps1pct":15,"p99FrameMs":83.4,"worstFrameMs":83.4,"droppedFrames":187,"scrollLongTaskMs":337,"heapDeltaMB":-66.1,"timeout":false},{"table":"ag-grid","renderMs":522,"firstPaintMs":52,"domNodes":2068,"renderLongTaskMs":250,"scrollMethod":"scroll","scrolledPx":24796,"avgFps":57.6,"lowFps1pct":22.5,"p99FrameMs":33.4,"worstFrameMs":83.3,"droppedFrames":6,"scrollLongTaskMs":390,"heapDeltaMB":26,"timeout":false},{"table":"tanstack-table","renderMs":399,"firstPaintMs":51,"domNodes":1004,"renderLongTaskMs":72,"scrollMethod":"scroll","scrolledPx":24795,"avgFps":37.2,"lowFps1pct":8.2,"p99FrameMs":66.7,"worstFrameMs":250,"droppedFrames":57,"scrollLongTaskMs":2421,"heapDeltaMB":197.4,"timeout":false}]; // eslint-disable-line
+  var META = {"time":"2026/8/15 20:48:12","scrollDuration":12000}; // eslint-disable-line
 
   var COLORS = [
     '#5b8ff9', '#5ad8a6', '#f6bd16', '#e86452', '#6dc8ec',
@@ -135,8 +139,8 @@
   // ---------------- 元信息 ----------------
   document.getElementById('meta').innerHTML =
     '时间：' + META.time +
-    '　|　环境：headless chromium, viewport 1600x1000, 生产构建' +
-    '　|　数据：1000 行 × 20 列，滚动会话 ' + META.scrollDuration + 'ms（先到底再回顶）';
+    '　|　环境：headless chromium, viewport 1600x10000, 生产构建' +
+    '　|　数据：10000 行 × 40 列，滚动会话 ' + META.scrollDuration + 'ms（先到底再回顶）';
 
   // ---------------- 雷达图 ----------------
   var DIMS = [
@@ -157,6 +161,16 @@
     vals.forEach(function (v, i) {
       var t = max === min ? 1 : (v - min) / (max - min);
       scoreTable[i][di] = Math.round(((dim.lower ? 1 - t : t) * 90 + 10) * 10) / 10;
+    });
+  });
+
+  // 各维度排名（1 = 最优，并列取相同排名）
+  var rankTable = DATA.map(function () { return []; });
+  DIMS.forEach(function (dim, di) {
+    var vals = DATA.map(function (d) { return Number(d[dim.key]) || 0; });
+    vals.forEach(function (v, i) {
+      var better = vals.filter(function (o) { return dim.lower ? o < v : o > v; }).length;
+      rankTable[i][di] = better + 1;
     });
   });
 
@@ -206,6 +220,11 @@
     curIdx = i;
     var c = colorOf(i);
     radarChart.setOption({
+      radar: {
+        indicator: DIMS.map(function (d, di) {
+          return { name: d.name + '  ' + rankTable[i][di] + '/' + DATA.length, max: 100 };
+        }),
+      },
       series: [
         {
           type: 'radar',

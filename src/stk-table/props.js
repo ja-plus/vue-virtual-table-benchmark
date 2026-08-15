@@ -59,7 +59,7 @@ export const tableColumns = [
     customCell,
   },
 
-  ...new Array(10).fill(0).map((it, i) => {
+  ...new Array(30).fill(0).map((it, i) => {
     return {
       title: 'other' + i,
       dataIndex: 'other' + i,
@@ -82,7 +82,7 @@ export const tableColumns = [
     customCell,
   },
 ];
-export const tableData = new Array(1000).fill(0).map((it, i) => {
+export const tableData = new Array(10000).fill(0).map((it, i) => {
   return {
     id: i + 'id',
     name: 'name' + i,

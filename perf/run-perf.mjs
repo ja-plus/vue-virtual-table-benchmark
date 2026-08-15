@@ -25,7 +25,10 @@ const PORT = 8091;
 const REPORT_PORT = 8093; // 报告服务端口
 const BASE_URL = `http://127.0.0.1:${PORT}/`;
 
-const SCROLL_DURATION = 4000; // 单次滚动会话时长（ms），前半程向下、后半程向上
+const SCROLL_DURATION = 12000; // 单次滚动会话超时上限（ms），内容跟随时序下实际用时因表格而异
+const MAX_SCROLL_PX = 25000; // 单次滚动距离上限（px），足够充分触发虚拟滚动，避免全程滚动耗时过长
+const SCROLL_ROUNDS = 2; // 正式测量轮数，取各指标中位数降低抖动
+const WARMUP_ROUNDS = 1; // 预热轮数（结果丢弃，消除 JIT 冷启动偏差）
 const RENDER_TIMEOUT = 30000; // 渲染稳定等待超时（ms）
 
 // ---------------- 构建 ----------------
@@ -69,9 +72,19 @@ async function startStaticServer() {
       res.end(String(e));
     }
   });
-  await new Promise(resolve => server.listen(PORT, '127.0.0.1', resolve));
-  console.log(`[2/4] 静态服务器已启动: ${BASE_URL}`);
-  return server;
+  // 端口被上次残留进程占用时自动顺延
+  const port = await new Promise((resolve, reject) => {
+    const tryListen = p => {
+      server.once('error', err => {
+        if (err.code === 'EADDRINUSE' && p < PORT + 10) tryListen(p + 1);
+        else reject(err);
+      });
+      server.listen(p, '127.0.0.1', () => resolve(p));
+    };
+    tryListen(PORT);
+  });
+  console.log(`[2/4] 静态服务器已启动: http://127.0.0.1:${port}/`);
+  return { server, port };
 }
 
 // ---------------- 页面内辅助函数 ----------------
@@ -103,9 +116,25 @@ const waitRenderStable = async timeoutMs => {
   return { ms: performance.now() - start, firstPaint, nodes: prev, timeout: true };
 };
 
-// 滚动会话：rAF 驱动 scrollTop（三角波：先到底再回顶）+ 同时采集帧间隔
-// canvas 类表格（如 VTable）没有可滚动 DOM，退化为合成 wheel 事件驱动
-const runScrollSession = durationMs => {
+// 滚动会话：JS 逐步驱动 scrollTop（三角波：先到底再回顶）+ 同时采集帧间隔
+// 每步推进后等待视口内出现真实行内容才继续（内容跟随时序），保证虚拟表格滚动不白屏
+// canvas 类表格（如 VTable）没有可滚动 DOM，退化为节流 wheel 事件驱动
+const runScrollSession = ({ timeoutMs, maxScrollPx }) => {
+  // 帧采集：外部通过 stop() 结束（page.evaluate 序列化函数须自包含，故定义在内部）
+  const startCollect = () => {
+    const frames = [];
+    let last;
+    let stopped = false;
+    const loop = t => {
+      if (stopped) return;
+      if (last != null) frames.push(t - last);
+      last = t;
+      requestAnimationFrame(loop);
+    };
+    requestAnimationFrame(loop);
+    return { frames, stop: () => (stopped = true) };
+  };
+
   const getPanelRoot = () =>
     document.querySelector('.tab-panel')?.parentElement || document.body;
   // 通用滚动容器查找：overflow 可滚动且 scrollHeight 超出可视高度的最大元素
@@ -132,75 +161,126 @@ const runScrollSession = durationMs => {
     return cands[0];
   };
 
-  const panel = getPanelRoot();
   const el = findScrollContainer();
+  const panel = getPanelRoot();
 
-  const collect = () =>
-    new Promise(resolve => {
-      const frames = [];
-      let last;
-      const start = performance.now();
-      const loop = t => {
-        if (last != null) frames.push(t - last);
-        last = t;
-        if (t - start < durationMs) requestAnimationFrame(loop);
-        else resolve(frames);
-      };
-      requestAnimationFrame(loop);
-    });
+  // 视口内是否已有真实行内容（白屏检测：可见行覆盖 ≥60% 且行内有真实文本）
+  // 虚拟表格复用行时元素先占位、内容后填充，仅查覆盖会误判放行导致闪白
+  const contentReady = () => {
+    const er = el.getBoundingClientRect();
+    let cover = 0;
+    let hasText = false;
+    for (const r of el.querySelectorAll(
+      'tr, [class*="row"], [class*="Row"], [class*="item"], [class*="Item"], [class*="cell-group"]',
+    )) {
+      const b = r.getBoundingClientRect();
+      if (b.height < 5 || b.width < 50) continue;
+      const top = Math.max(b.top, er.top);
+      const bot = Math.min(b.bottom, er.bottom);
+      if (bot - top <= 0) continue;
+      cover += bot - top;
+      if (!hasText && r.textContent.trim()) hasText = true;
+      if (cover >= er.height * 0.6 && hasText) return true;
+    }
+    return false;
+  };
 
   const driveScroll = () =>
     new Promise(resolve => {
       if (!el) return resolve({ method: 'none', moved: 0 });
-      const max = el.scrollHeight - el.clientHeight;
+      // 滚动距离限幅：充分触发虚拟化即可，避免 10000 行全程滚动耗时过长
+      const max = Math.min(el.scrollHeight - el.clientHeight, maxScrollPx);
       if (max <= 0) return resolve({ method: 'no-scroll', moved: 0 });
       el.scrollTop = 0;
-      const start = performance.now();
+      const viewH = el.clientHeight || 600;
+      const stepPx = Math.max(120, Math.min(400, Math.round(viewH * 0.35)));
+      const totalFrames = Math.ceil(max / stepPx);
+      const peakFrame = Math.ceil(totalFrames / 2);
+      const deadline = performance.now() + timeoutMs;
+      let f = 0;
       let peak = 0;
-      const step = now => {
-        const p = Math.min(1, (now - start) / durationMs);
-        const q = p < 0.5 ? p * 2 : (1 - p) * 2; // 三角波
-        el.scrollTop = max * q;
+      const step = () => {
+        if (performance.now() > deadline) {
+          return resolve({ method: 'scroll', moved: Math.round(peak), timeout: true });
+        }
+        f++;
+        el.scrollTop =
+          f <= peakFrame
+            ? Math.min(f * stepPx, max)
+            : Math.max(max - (f - peakFrame) * stepPx, 0);
         peak = Math.max(peak, el.scrollTop);
-        if (p < 1) requestAnimationFrame(step);
-        else resolve({ method: 'scroll', moved: Math.round(peak) });
+        const done = f >= totalFrames;
+        // 连续 2 帧内容就绪（无白屏）或超时 150ms 后才推进下一步，避免复用行未填充就跳步导致闪烁
+        requestAnimationFrame(() => {
+          const w0 = performance.now();
+          let hits = 0;
+          const proceed = () => {
+            if (done) resolve({ method: 'scroll', moved: Math.round(peak) });
+            else requestAnimationFrame(step);
+          };
+          const poll = () => {
+            if (contentReady()) {
+              if (++hits >= 2) return proceed();
+            } else {
+              hits = 0;
+              if (performance.now() - w0 > 150) return proceed();
+            }
+            requestAnimationFrame(poll);
+          };
+          poll();
+        });
       };
       requestAnimationFrame(step);
     });
 
   const driveWheel = () =>
     new Promise(resolve => {
-      // canvas 类表格（如 VTable）没有可滚动 DOM，用 wheel 事件驱动
+      // canvas 表格无可滚动 DOM：高频 wheel 模拟手动快速拖动滚动条（每帧一次、步长约一个视口），
+      // canvas 重绘是同步的，不存在白屏，无需节流，压力贴近手动拖动的真实体感
       const target = panel.querySelector('canvas') || panel;
+      const r = target.getBoundingClientRect();
+      const stepY = Math.max(400, r.height * 0.9);
+      const duration = timeoutMs;
       const start = performance.now();
-      const step = now => {
-        const p = (now - start) / durationMs;
-        if (p >= 1) return resolve('wheel');
-        const dir = p < 0.5 ? 1 : -1;
-        const r = target.getBoundingClientRect();
+      let down = true;
+      const fire = dir => {
         target.dispatchEvent(
           new WheelEvent('wheel', {
-            deltaY: 120 * dir,
+            deltaY: stepY * dir,
             clientX: r.left + r.width / 2,
             clientY: r.top + r.height / 2,
             bubbles: true,
             cancelable: true,
           }),
         );
-        requestAnimationFrame(step);
       };
-      requestAnimationFrame(step);
-    }).then(() => ({ method: 'wheel', moved: -1 }));
+      const tick = () => {
+        const now = performance.now();
+        if (now - start > duration) return resolve({ method: 'wheel', moved: -1 });
+        if (now - start > duration / 2) down = false;
+        fire(down ? 1 : -1);
+        requestAnimationFrame(tick);
+      };
+      requestAnimationFrame(tick);
+    });
 
-  return Promise.all([collect(), el ? driveScroll() : driveWheel()]).then(([frames, drive]) => ({
-    frames,
-    ...drive,
-  }));
+  const collector = startCollect();
+  return (el ? driveScroll() : driveWheel()).then(drive => {
+    collector.stop();
+    return { frames: collector.frames, ...drive };
+  });
 };
 
 // ---------------- 统计 ----------------
+const median = arr => {
+  const s = [...arr].sort((a, b) => a - b);
+  return s[Math.floor(s.length / 2)];
+};
+
 function frameStats(frames) {
   if (!frames.length) return null;
+  // 丢弃开头 5 帧：rAF 启动瞬间及驱动函数刚执行的抖动
+  frames = frames.slice(5);
   const total = frames.reduce((a, b) => a + b, 0);
   const avgFps = (frames.length / total) * 1000;
   const sorted = [...frames].sort((a, b) => b - a);
@@ -225,15 +305,16 @@ function frameStats(frames) {
 // ---------------- 主流程 ----------------
 async function main() {
   build();
-  const server = await startStaticServer();
+  const { server, port } = await startStaticServer();
 
-  console.log('[3/4] 启动 headless chromium 执行测试...');
+  console.log('[3/4] 启动 chromium（headed 模式，接近真实浏览器体感）执行测试...');
   const browser = await chromium.launch({
+    headless: false,
     args: ['--enable-precise-memory-info'],
   });
   const page = await browser.newPage({ viewport: { width: 1600, height: 1000 } });
   page.on('pageerror', e => console.warn('  [pageerror]', e.message));
-  await page.goto(BASE_URL, { waitUntil: 'load' });
+  await page.goto(`http://127.0.0.1:${port}/`, { waitUntil: 'load' });
   await page.waitForSelector('.tab-btn');
 
   // 安装 longtask 观察器
@@ -289,12 +370,37 @@ async function main() {
     const renderMs = Date.now() - t0;
     const ltRender = await page.evaluate(() => window.__longTasks.slice());
 
-    // --- 滚动测试 ---
-    await page.evaluate(() => (window.__longTasks.length = 0));
-    await new Promise(r => setTimeout(r, 300)); // 渲染后静置，避免影响滚动采样
-    const { frames, method, moved } = await page.evaluate(runScrollSession, SCROLL_DURATION);
-    const stats = frameStats(frames);
-    const ltScroll = await page.evaluate(() => window.__longTasks.slice());
+    // --- 滚动测试：预热 + 多轮采样，各指标取中位数降低抖动 ---
+    await new Promise(r => setTimeout(r, 150)); // 渲染后静置，避免影响滚动采集
+    let method = 'none';
+    let moved = 0;
+    const roundStats = [];
+    const ltScrollAll = [];
+    for (let round = 0; round < WARMUP_ROUNDS + SCROLL_ROUNDS; round++) {
+      await page.evaluate(() => (window.__longTasks.length = 0));
+      const s = await page.evaluate(runScrollSession, {
+        timeoutMs: SCROLL_DURATION,
+        maxScrollPx: MAX_SCROLL_PX,
+      });
+      method = s.method;
+      moved = Math.max(moved, s.moved);
+      const lt = await page.evaluate(() => window.__longTasks.slice());
+      if (round >= WARMUP_ROUNDS) {
+        roundStats.push(frameStats(s.frames));
+        ltScrollAll.push(...lt);
+      }
+    }
+    const valid = roundStats.filter(Boolean);
+    const stats = valid.length
+      ? {
+          avgFps: +median(valid.map(s => s.avgFps)).toFixed(1),
+          lowFps1pct: +median(valid.map(s => s.lowFps1pct)).toFixed(1),
+          p99FrameMs: +median(valid.map(s => s.p99FrameMs)).toFixed(1),
+          worstFrameMs: +median(valid.map(s => s.worstFrameMs)).toFixed(1),
+          dropped: Math.round(median(valid.map(s => s.dropped))),
+        }
+      : null;
+    const ltScroll = ltScrollAll;
     if (method === 'scroll' && moved === 0) {
       console.warn(`  ⚠ ${label}: 滚动容器未实际滚动，FPS 数据无效`);
     }
