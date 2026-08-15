@@ -5,6 +5,8 @@
       row-key="id"
       style="height: 600px"
       virtual
+      virtual-x
+      scrollbar
       fixed-col-shadow
       :columns="tableColumns"
       :data-source="tableData"

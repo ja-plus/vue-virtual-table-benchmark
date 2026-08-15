@@ -2,12 +2,11 @@
   <div>
     <h2>vxe-table</h2>
     <VxeTable
-      id="id"
       border
       :data="tableData"
       :height="600"
-      :scroll-y="{ enabled: true }"
-      :scroll-x="{ enabled: true, gt: 0 }"
+      :virtual-y-config="{ enabled: true, gt: 0 }"
+      :virtual-x-config="{ enabled: true, gt: 0 }"
       :row-config="{ height: 28, isHover: true }"
     >
       <VxeColumn
