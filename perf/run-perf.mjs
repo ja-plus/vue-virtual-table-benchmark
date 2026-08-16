@@ -45,6 +45,9 @@ const PACKAGE_OF = {
   vuetify: 'vuetify',
   primevue: 'primevue',
   'tanstack-virtual': '@tanstack/vue-virtual',
+  revogrid: '@revolist/revogrid',
+  'canvas-vue-table': 'canvas-vue-table',
+  'simple-table': '@simple-table/vue',
 };
 
 // 可用性特性配置（取值 1=支持，0.5=部分支持，0=不支持）：
@@ -67,6 +70,9 @@ const USABILITY = {
   'v-table': { fixed: 1, rowHeight: 1, hVirtual: 1, width: 1 },
   'ag-grid': { fixed: 1, rowHeight: 1, hVirtual: 1, width: 1 },
   'tanstack-virtual': { fixed: 0, rowHeight: 1, hVirtual: 0, width: 1 },
+  revogrid: { fixed: 1, rowHeight: 1, hVirtual: 1, width: 1 },
+  'canvas-vue-table': { fixed: 1, rowHeight: 0, hVirtual: 0, width: 1 },
+  'simple-table': { fixed: 1, rowHeight: 1, hVirtual: 1, width: 1 },
   // 注：vue-virtual-scroller / virtua / vueuc(VirtualList) 为通用虚拟列表，不属于表格组件，
   // 已从应用移除、不参与测试与排名（代码保留于 src/vue/ 下）
 };
@@ -86,6 +92,9 @@ const EASE_OF_USE = {
   'v-table': { score: 3, note: 'canvas 渲染模型特殊，配置模型学习成本较高' },
   'ag-grid': { score: 3.5, note: '文档与示例完善、功能强大，但概念较多且社区版有功能限制' },
   'tanstack-virtual': { score: 3, note: 'headless API 简洁，但 UI、固定列、表头全需手写' },
+  revogrid: { score: 3.5, note: 'Web Component 零配置即可用、性能强悍，但 Vue 集成需 loader 注册，文档偏底层' },
+  'canvas-vue-table': { score: 2.5, note: 'API 简洁，但生态极小、文档少；行高硬编码最小39px无法压至28px，横向非逐列虚拟化' },
+  'simple-table': { score: 3.5, note: 'API 现代、双虚拟开箱即用，但 Community 授权非开源可商用，需付费' },
 };
 
 // 读取组件库实际安装版本（读不到时返回空串）

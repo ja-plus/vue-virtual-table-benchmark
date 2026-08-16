@@ -1,6 +1,6 @@
 ---
 name: "vue-table-component"
-description: "在 Vue 虚拟表格性能对比项目中新增或更新一个表格组件。组件必须满足 README「新表格接入规范」（行高28px、左右固定列、600px高度、横纵双虚拟滚动）。升级版本、修复兼容性、调试组件、注册 Tab、更新 perf 测试配置与报告。当用户要求"新增/接入/升级/修复某个表格组件"时调用。"
+description: "在 Vue 虚拟表格性能对比项目中新增或更新一个表格组件。组件必须满足 README「新表格接入规范」（行高28px、竖向边框、左右固定列、600px高度、横纵双虚拟滚动）。升级版本、修复兼容性、调试组件、注册 Tab、更新 perf 测试配置与报告。当用户要求"新增/接入/升级/修复某个表格组件"时调用。"
 ---
 
 # Vue Virtual Table 组件接入 Skill
@@ -15,7 +15,8 @@ description: "在 Vue 虚拟表格性能对比项目中新增或更新一个表�
 
 | 规范项 | 要求 |
 | --- | --- |
-| 行高 | 28px；库不支持直接设置时用 CSS 压到 28px（参考 `src/vue/AntdvTable.vue`） |
+| 行高 | 28px，且**虚拟滚动计算值与视觉行高必须一致**（需实测确认，不能只看 API）；库不支持直接设置时用 CSS 压到 28px（参考 `src/vue/AntdvTable.vue`） |
+| 竖向边框 | 列间须有竖向分隔线；库默认不开时用对应开关（如 canvas-vue-table 的 `bordered`）或 CSS 开启 |
 | 左右固定列 | 支持；正确映射 `src/stk-table/props.js` 中 `tableColumns` 的 `fixed`（Name/Age 左固定，R/Operate 右固定） |
 | 表格高度 | 600px |
 | 虚拟列表 | 横向 + 纵向均开启，缺一不可 |
@@ -69,7 +70,7 @@ description: "在 Vue 虚拟表格性能对比项目中新增或更新一个表�
 ## 验收标准
 
 - 组件在 `npm run dev` 下可运行，无控制台报错。
-- 满足核心规范：行高 28px、左右固定列正确、高度 600px、横纵双虚拟滚动；不支持项在模板顶部显式列出。
+- 满足核心规范：行高 28px、竖向边框、左右固定列正确、高度 600px、横纵双虚拟滚动；不支持项在模板顶部显式列出。
 - `App.vue` 已注册 Tab，可切换查看。
 - `npm run perf` 成功，`perf-results.json` 已包含该组件最新版本数据，`perf-report.html` 已更新。
 
@@ -78,4 +79,8 @@ description: "在 Vue 虚拟表格性能对比项目中新增或更新一个表�
 - 不要修改 `src/stk-table/props.js` 的 `tableColumns`/`tableData` 定义（各库统一口径）。
 - 不新增文件除非必要；优先复用现有构造（`computed` 列映射、`reduce` 算滚动宽度）。
 - 虚拟滚动能力禁止强行模拟；库原生不支持时显式列出而非伪造。
+- 行高必须**实测视觉高度**（用 DevTools 量取），不要只凭 API 名判断；`min-height`/`min-item-height` 这类"最小值"不等于最终行高。
+- canvas 渲染类表格（如 canvas-vue-table）常把行高硬编码进绘制逻辑（行高+内边距常量），CSS 无法压缩，此时须如实把"行高28px"列为不支持项，并把 `perf/run-perf.mjs` 的 `USABILITY` 中该库 `rowHeight` 置 0。
+- 竖向边框默认关闭的库（如 canvas-vue-table）须用 `bordered` 等开关开启，否则列为不支持项。
+- Web Component 类表格（如 RevoGrid）须在应用启动时（`src/vue/app.js`）全局注册一次自定义元素，避免在懒加载 chunk 内注册后被 HMR 热替换导致构造函数失效；列/数据需通过 ref 直接赋属性（而非 HTML 属性）。
 - 更新组件后必须重新运行 `npm run perf`，否则报告数据会停留在旧版本。

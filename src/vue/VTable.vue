@@ -24,11 +24,11 @@ onMounted(() => {
     defaultRowHeight: 28,
     frozenColCount: 2,
     rightFrozenColCount: 2,
-    theme: {
-      defaultStyle: { borderColor: '#e1e4e8', borderLineWidth: 1 },
-      headerStyle: { borderColor: '#e1e4e8', borderLineWidth: 1 },
-      bodyStyle: { borderColor: '#e1e4e8', borderLineWidth: 1 },
-    },
+    // theme: {
+    //   defaultStyle: { borderColor: '#e1e4e8', borderLineWidth: 1 },
+    //   headerStyle: { borderColor: '#e1e4e8', borderLineWidth: 1 },
+    //   bodyStyle: { borderColor: '#e1e4e8', borderLineWidth: 1 },
+    // },
   });
 });
 </script>

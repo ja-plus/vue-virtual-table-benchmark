@@ -15,7 +15,8 @@ description: "在 Vue 虚拟表格性能对比项目中新增或更新一个表�
 
 | 规范项 | 要求 |
 | --- | --- |
-| 行高 | 28px；库不支持直接设置时用 CSS 压到 28px（参考 `src/vue/AntdvTable.vue`） |
+| 行高 | 28px，且**虚拟滚动计算值与视觉行高必须一致**（需实测确认，不能只看 API）；库不支持直接设置时用 CSS 压到 28px（参考 `src/vue/AntdvTable.vue`） |
+| 竖向边框 | 列间须有竖向分隔线；库默认不开时用对应开关（如 canvas-vue-table 的 `bordered`）或 CSS 开启 |
 | 左右固定列 | 支持；正确映射 `src/stk-table/props.js` 中 `tableColumns` 的 `fixed`（Name/Age 左固定，R/Operate 右固定） |
 | 表格高度 | 600px |
 | 虚拟列表 | 横向 + 纵向均开启，缺一不可 |
@@ -78,4 +79,7 @@ description: "在 Vue 虚拟表格性能对比项目中新增或更新一个表�
 - 不要修改 `src/stk-table/props.js` 的 `tableColumns`/`tableData` 定义（各库统一口径）。
 - 不新增文件除非必要；优先复用现有构造（`computed` 列映射、`reduce` 算滚动宽度）。
 - 虚拟滚动能力禁止强行模拟；库原生不支持时显式列出而非伪造。
+- 行高必须**实测视觉高度**（用 DevTools 量取），不要只凭 API 名判断；`min-height`/`min-item-height` 这类"最小值"不等于最终行高。
+- canvas 渲染类表格（如 canvas-vue-table）常把行高硬编码进绘制逻辑（行高+内边距常量），CSS 无法压缩，此时须如实把"行高28px"列为不支持项，并把 `perf/run-perf.mjs` 的 `USABILITY` 中该库 `rowHeight` 置 0。
+- 竖向边框默认关闭的库（如 canvas-vue-table）须用 `bordered` 等开关开启，否则列为不支持项。
 - 更新组件后必须重新运行 `npm run perf`，否则报告数据会停留在旧版本。

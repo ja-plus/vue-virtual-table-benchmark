@@ -14,6 +14,9 @@ Vue 各表格组件库渲染与虚拟滚动性能对比基准测试。
 * vTable
 * AgGrid
 * tanstack table
+* RevoGrid
+* canvas-vue-table
+* @simple-table/vue
 
 ## 新表格接入规范
 

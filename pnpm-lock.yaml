@@ -14,6 +14,12 @@ importers:
       '@primeuix/themes':
         specifier: ^1.2.5
         version: 1.2.5
+      '@revolist/revogrid':
+        specifier: ^4.26.0
+        version: 4.26.0
+      '@simple-table/vue':
+        specifier: ^4.1.6
+        version: 4.1.6(vue@3.5.41(typescript@5.9.2))
       '@surely-vue/table':
         specifier: ^5.1.6
         version: 5.1.6(vue@3.5.41(typescript@5.9.2))
@@ -32,6 +38,9 @@ importers:
       ag-grid-vue3:
         specifier: ^36.1.0
         version: 36.1.0(vue@3.5.41(typescript@5.9.2))
+      canvas-vue-table:
+        specifier: ^0.0.6
+        version: 0.0.6(vue@3.5.41(typescript@5.9.2))
       element-plus:
         specifier: 2.14.4
         version: 2.14.4(vue@3.5.41(typescript@5.9.2))
@@ -41,6 +50,9 @@ importers:
       primevue:
         specifier: 4.5.5
         version: 4.5.5(vue@3.5.41(typescript@5.9.2))
+      simple-table-core:
+        specifier: 4.1.6
+        version: 4.1.6
       stk-table-vue:
         specifier: 1.1.0
         version: 1.1.0
@@ -407,6 +419,9 @@ packages:
     resolution: {integrity: sha512-wTOf1zerZX8qYcMmLZw3czR4paI4hXqPjShNwJRh5DeHxvgffUS5KM7XwxtbIheUW6LVYT5fhT2AJiP6mU7U4A==}
     engines: {node: '>= 10'}
 
+  '@revolist/revogrid@4.26.0':
+    resolution: {integrity: sha512-YBvjnNfsBHQANMIr8kD3uRHsUpbPzDf9zw8U4rocl7ShP4emQwF8kUK5GTv88vJmbpqe5rpw2BN2ZRCL07rvvg==}
+
   '@rspack/binding-darwin-arm64@2.1.10':
     resolution: {integrity: sha512-DZlcTpbIb2mjeS1aSG4k01UH33Zj7T+k8ZylPK6HmsKs4JvK4wgpWFC78WVv3p/Aj3MZS6DwtDLwpZ2Ihj/fpg==}
     cpu: [arm64]
@@ -530,6 +545,11 @@ packages:
 
   '@simonwep/pickr@1.8.2':
     resolution: {integrity: sha512-/l5w8BIkrpP6n1xsetx9MWPWlU6OblN5YgZZphxan0Tq4BByTCETL6lyIeY8lagalS2Nbt4F2W034KHLIiunKA==}
+
+  '@simple-table/vue@4.1.6':
+    resolution: {integrity: sha512-Dl0cQQuUBx9zx7vvvoFXhll054jFTG+hwZEBhLiDeHq8ZgNKh8t27+5XxEbsfHCvHZDTqEhTPbJ5P2LxaRgHpg==}
+    peerDependencies:
+      vue: '>=3.0.0'
 
   '@surely-vue/table@5.1.6':
     resolution: {integrity: sha512-34/U6XncaxndUivUqUAACg9mitZVIIktkeuJfx5Rj++maTAunzf+4Sl2MKJKvdjXj2JGAmPhx9DXI23vBWfxgw==}
@@ -856,6 +876,11 @@ packages:
 
   caniuse-lite@1.0.30001733:
     resolution: {integrity: sha512-e4QKw/O2Kavj2VQTKZWrwzkt3IxOmIlU6ajRb6LP64LHpBo1J67k2Hi4Vu/TgJWsNtynurfS0uK3MaUTCPfu5Q==}
+
+  canvas-vue-table@0.0.6:
+    resolution: {integrity: sha512-veEjw8R9Y6q7EHjDBKVrL3pt+/7GL1CJz+r2kcA2k3QXIOOzdJCVSuF9JX9Lc+WlYDyx83Ju5Ar5i03olezuzQ==}
+    peerDependencies:
+      vue: ^3.3.0
 
   chalk@4.1.2:
     resolution: {integrity: sha512-oKnbhFyRIXpUuez8iBMmyEa4nbj4IOQyuhc/wy9kY7/WVPcwIO9VA668Pu8RkO7+0G76SLROeyw9CpQ061i4mA==}
@@ -1790,6 +1815,9 @@ packages:
   simple-swizzle@0.2.2:
     resolution: {integrity: sha512-JA//kQgZtbuY83m+xT+tXJkmJncGMTFT+C+g2h2R9uxkYIrE2yy9sgmcLhCnw57/WSD+Eh3J97FPEDFnbXnDUg==}
 
+  simple-table-core@4.1.6:
+    resolution: {integrity: sha512-2GAkPUztFYC59zlAWnOf2/9L71xXbC6O+P4dRvAYnxr0EDImvhYsS1jWYPXkSatRnWGAls3ISipibQzt7StDxw==}
+
   simplify-geojson@1.0.5:
     resolution: {integrity: sha512-02l1W4UipP5ivNVq6kX15mAzCRIV1oI3tz0FUEyOsNiv1ltuFDjbNhO+nbv/xhbDEtKqWLYuzpWhUsJrjR/ypA==}
     hasBin: true
@@ -2390,6 +2418,8 @@ snapshots:
       '@resvg/resvg-js-win32-ia32-msvc': 2.4.1
       '@resvg/resvg-js-win32-x64-msvc': 2.4.1
 
+  '@revolist/revogrid@4.26.0': {}
+
   '@rspack/binding-darwin-arm64@2.1.10':
     optional: true
 
@@ -2476,6 +2506,11 @@ snapshots:
     dependencies:
       core-js: 3.45.0
       nanopop: 2.4.2
+
+  '@simple-table/vue@4.1.6(vue@3.5.41(typescript@5.9.2))':
+    dependencies:
+      simple-table-core: 4.1.6
+      vue: 3.5.41(typescript@5.9.2)
 
   '@surely-vue/table@5.1.6(vue@3.5.41(typescript@5.9.2))':
     dependencies:
@@ -2936,6 +2971,10 @@ snapshots:
       tslib: 2.8.1
 
   caniuse-lite@1.0.30001733: {}
+
+  canvas-vue-table@0.0.6(vue@3.5.41(typescript@5.9.2)):
+    dependencies:
+      vue: 3.5.41(typescript@5.9.2)
 
   chalk@4.1.2:
     dependencies:
@@ -3906,6 +3945,8 @@ snapshots:
   simple-swizzle@0.2.2:
     dependencies:
       is-arrayish: 0.3.2
+
+  simple-table-core@4.1.6: {}
 
   simplify-geojson@1.0.5:
     dependencies:

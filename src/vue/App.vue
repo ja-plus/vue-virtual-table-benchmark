@@ -63,6 +63,21 @@ const tabs = [
     label: 'tanstack-virtual',
     comp: defineAsyncComponent(() => import('./TanStackVirtualTable.vue')),
   },
+  {
+    key: 'revogrid-table',
+    label: 'revogrid',
+    comp: defineAsyncComponent(() => import('./RevoGridTable.vue')),
+  },
+  {
+    key: 'canvas-vue-table',
+    label: 'canvas-vue-table',
+    comp: defineAsyncComponent(() => import('./CanvasVueTable.vue')),
+  },
+  {
+    key: 'simple-table',
+    label: 'simple-table',
+    comp: defineAsyncComponent(() => import('./SimpleTableTable.vue')),
+  },
   // 注：vue-virtual-scroller / virtua / vueuc(VirtualList) 为通用虚拟列表组件，
   // 不属于表格组件，不加入排名；实现代码保留在 VirtualScrollerTable / VirtuaTable / VueucVirtualList.vue
 ];
