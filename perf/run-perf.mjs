@@ -42,7 +42,12 @@ const PACKAGE_OF = {
   'ant-design-vue(surely-vue)': '@surely-vue/table',
   'v-table': '@visactor/vtable',
   'ag-grid': 'ag-grid-vue3',
-  'tanstack-table': '@tanstack/vue-table',
+  vuetify: 'vuetify',
+  primevue: 'primevue',
+  'vue-virtual-scroller': 'vue-virtual-scroller',
+  virtua: 'virtua',
+  'vueuc(VirtualList)': 'vueuc',
+  'tanstack-virtual': '@tanstack/vue-virtual',
 };
 
 // 读取组件库实际安装版本（读不到时返回空串）
@@ -393,7 +398,7 @@ async function main() {
   const labels = [];
   for (const b of buttons) labels.push(await b.textContent());
 
-  // 预检测：跳过没有真实表格组件的 tab（如 vuetify 占位页）
+  // 预检测：跳过没有真实表格组件的 tab
   const skip = new Set();
   for (let i = 0; i < buttons.length; i++) {
     await buttons[i].click();

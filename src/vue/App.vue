@@ -38,7 +38,16 @@ const tabs = [
     label: 'ant-design-vue(surely-vue)',
     comp: defineAsyncComponent(() => import('./AntdvTable.vue')),
   },
-  { key: 'vuetify-table', label: 'vuetify' },
+  {
+    key: 'vuetify-table',
+    label: 'vuetify',
+    comp: defineAsyncComponent(() => import('./VuetifyTable.vue')),
+  },
+  {
+    key: 'primevue-table',
+    label: 'primevue',
+    comp: defineAsyncComponent(() => import('./PrimeVueTable.vue')),
+  },
   {
     key: 'vtable',
     label: 'v-table',
@@ -50,9 +59,24 @@ const tabs = [
     comp: defineAsyncComponent(() => import('./AgGrid.vue')),
   },
   {
-    key: 'tanstack-table',
-    label: 'tanstack-table',
-    comp: defineAsyncComponent(() => import('./TanStackTable.vue')),
+    key: 'tanstack-virtual',
+    label: 'tanstack-virtual',
+    comp: defineAsyncComponent(() => import('./TanStackVirtualTable.vue')),
+  },
+  {
+    key: 'virtual-scroller',
+    label: 'vue-virtual-scroller',
+    comp: defineAsyncComponent(() => import('./VirtualScrollerTable.vue')),
+  },
+  {
+    key: 'virtua',
+    label: 'virtua',
+    comp: defineAsyncComponent(() => import('./VirtuaTable.vue')),
+  },
+  {
+    key: 'vueuc-virtual-list',
+    label: 'vueuc(VirtualList)',
+    comp: defineAsyncComponent(() => import('./VueucVirtualList.vue')),
   },
 ];
 
@@ -73,26 +97,8 @@ const activeTab = shallowRef(tabs[0]);
       </button>
     </div>
 
-    <div
-      v-if="activeTab.key === 'vuetify-table'"
-      key="panel-vuetify"
-      class="tab-panel"
-    >
-      <h2>vuetify 虚拟表</h2>
-      <ul>
-        <li>
-          文档不全<a
-            href="https://vuetifyjs.com/zh-Hans/components/data-tables/virtual-tables/#basic-example"
-            target="_blank"
-            >虚拟表</a
-          >
-        </li>
-      </ul>
-    </div>
-
     <component
       :is="activeTab.comp"
-      v-else
       :key="'panel-' + activeTab.key"
       class="tab-panel"
     ></component>
