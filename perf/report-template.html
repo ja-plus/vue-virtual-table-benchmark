@@ -116,6 +116,9 @@
   .mark-ok { color: #389e0d; }
   .mark-part { color: #d46b08; }
   .mark-no { color: #cf1322; }
+  #easeTable th { text-align: center; }
+  #easeTable td { text-align: center; }
+  #easeTable td:first-child { text-align: left; white-space: nowrap; }
   /* ---- 条形图网格 ---- */
   .chart-grid {
     display: grid;
@@ -161,9 +164,21 @@
     <div class="note">
       判定口径：列固定 = 是否支持左右固定列（TDesign 左右固定互斥计部分）；
       行高控制 = 是否原生支持设置行高（经 CSS 压缩实现计部分，如 surely-vue / naive-ui / tdesign / primevue）；
-      横向虚拟列表 = 列级虚拟化，横向滚动只渲染可见列（整行渲染、仅容器横向滚动计不支持）；
+      横向虚拟列表 = 列级虚拟化，横向滚动只渲染可见列（整行渲染、仅容器横向滚动计不支持；库原生支持但当前版本缺陷未启用计部分支持，如 naive-ui 2.44.1 的 virtual-scroll-x 固定列错位）；
       宽度控制 = 容器宽度自适应铺满（element TableV2 需 ResizeObserver 动态控制计部分）。
       ✓ 支持　△ 部分　✕ 不支持。
+    </div>
+  </div>
+
+  <h2>易用性主观评分</h2>
+  <div class="card">
+    <div class="usability-stats" id="easeStats"></div>
+    <div class="table-scroll">
+      <table id="easeTable"></table>
+    </div>
+    <div class="note">
+      易用性为作者在接入本项目（10000 行 × 40 列、左右固定列、横纵虚拟滚动）过程中的主观评分（5 分制，0.5 分档），
+      评估维度：配置复杂度 / 文档质量 / 类型提示与 API 设计 / 开箱即用程度。
     </div>
   </div>
 
@@ -394,6 +409,34 @@
     })
     .join('');
   document.getElementById('usabilityTable').innerHTML = uThead + uTbody;
+
+  // ---------------- 易用性主观评分 ----------------
+  function easeScore(d) {
+    return Number((d.easeOfUse || {}).score) || 0;
+  }
+  // 按评分降序排列
+  var easeRows = DATA.map(function (d) {
+    return { name: d.table, score: easeScore(d), note: (d.easeOfUse || {}).note || '' };
+  }).sort(function (a, b) { return b.score - a.score; });
+  var avgEase = DATA.reduce(function (s, d) { return s + easeScore(d); }, 0) / DATA.length;
+  var highEase = DATA.filter(function (d) { return easeScore(d) >= 4; }).length;
+  document.getElementById('easeStats').innerHTML =
+    '<div class="u-stat"><div class="u-name">平均分</div>' +
+    '<div class="u-num"><span class="u-total">' + avgEase.toFixed(1) + '/5</span></div></div>' +
+    '<div class="u-stat"><div class="u-name">≥4 分（易上手）</div>' +
+    '<div class="u-num"><span class="mark-ok">' + highEase + '/' + DATA.length + '</span></div></div>';
+  var easeThead = '<tr><th>表格</th><th>评分</th><th>主观理由</th></tr>';
+  var easeTbody = easeRows
+    .map(function (r) {
+      var cls = r.score >= 4 ? 'mark-ok' : r.score >= 3 ? 'mark-part' : 'mark-no';
+      return (
+        '<tr><td>' + r.name + '</td>' +
+        '<td class="u-score ' + cls + '">' + r.score + '/5</td>' +
+        '<td style="text-align:left;white-space:normal;min-width:280px;color:#666">' + r.note + '</td></tr>'
+      );
+    })
+    .join('');
+  document.getElementById('easeTable').innerHTML = easeThead + easeTbody;
 
   // ---------------- 明细表 ----------------
   var TABLE_COLS = [

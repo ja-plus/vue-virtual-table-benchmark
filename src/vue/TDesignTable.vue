@@ -10,7 +10,7 @@
     </h2>
     <ul>
       <li>fixed right 覆盖fixed left</li>
-      <li>设置行高便。只能设置参考行高。需要通过css设置行高。</li>
+      <li>设置行高不便。只能设置参考行高。需要通过css设置行高。</li>
     </ul>
     <Table
       row-key="id"

@@ -1,14 +1,11 @@
 <template>
   <div>
     <h2>primevue DataTable</h2>
-    <ul>
-      <li>frozen 左右固定列</li>
-      <li>虚拟滚动 virtualScrollerOptions</li>
-    </ul>
     <DataTable
       :value="tableData"
       scrollable
       scroll-height="600px"
+      :table-style="{ width: scrollX + 'px' }"
       :virtual-scroller-options="{ itemSize: 28, numToleratedItems: 5 }"
     >
       <Column
@@ -18,8 +15,8 @@
         :header="col.title"
         :frozen="!!col.fixed"
         :align-frozen="col.fixed === 'right' ? 'right' : 'left'"
-        :style="{ width: col.width + 'px' }"
-        :header-style="{ width: col.width + 'px' }"
+        :style="{ width: col.width + 'px', minWidth: col.width + 'px' }"
+        :header-style="{ width: col.width + 'px', minWidth: col.width + 'px' }"
       />
     </DataTable>
   </div>
@@ -32,6 +29,7 @@ import Aura from '@primeuix/themes/aura';
 import DataTable from 'primevue/datatable';
 import Column from 'primevue/column';
 import { tableColumns, tableData } from '../stk-table/props.js';
+const scrollX = tableColumns.reduce((sum, it) => sum + it.width, 0);
 
 // primevue 4 的组件样式由主题 preset 驱动（CSS-in-JS 运行时注入），
 // 必须 app.use(PrimeVue, { theme }) 才能激活，模块级单例安装一次即可
@@ -57,5 +55,7 @@ ensurePrimeVue();
   padding: 0 8px;
   font-size: 12px;
   white-space: nowrap;
+  /* 纵向格线与横线同色 */
+  border-right: 1px solid var(--p-content-border-color, #e2e8f0);
 }
 </style>

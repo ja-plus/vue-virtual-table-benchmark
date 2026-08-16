@@ -50,13 +50,14 @@ const PACKAGE_OF = {
 // 可用性特性配置（取值 1=支持，0.5=部分支持，0=不支持）：
 //   fixed     = 左右固定列
 //   rowHeight = 行高控制（原生支持；需 CSS 压缩实现计 0.5）
-//   hVirtual  = 横向虚拟列表（列级虚拟化，只渲染可见列；整行渲染仅容器横向滚动计 0）
+//   hVirtual  = 横向虚拟列表（列级虚拟化，只渲染可见列；整行渲染仅容器横向滚动计 0；
+//               库原生支持但当前版本缺陷未启用计 0.5，如 naive-ui 2.44.1 virtual-scroll-x 固定列错位）
 //   width     = 宽度控制（容器宽度自适应铺满；需外部 ResizeObserver 等 JS 动态控制计 0.5）
 // 依据：各组件模板顶部 ul > li 标注及组件实际配置（virtual-x / fixed / rowHeight 等）
 const USABILITY = {
   'stk-table-vue': { fixed: 1, rowHeight: 1, hVirtual: 1, width: 1 },
   'vxe-table': { fixed: 1, rowHeight: 1, hVirtual: 1, width: 1 },
-  'naive-ui': { fixed: 1, rowHeight: 0.5, hVirtual: 0, width: 1 },
+  'naive-ui': { fixed: 1, rowHeight: 0.5, hVirtual: 0.5, width: 1 },
   'element-plus': { fixed: 1, rowHeight: 1, hVirtual: 0, width: 0.5 },
   'arco-design': { fixed: 0, rowHeight: 0, hVirtual: 0, width: 1 },
   tdesign: { fixed: 0.5, rowHeight: 0.5, hVirtual: 0, width: 1 },
@@ -68,6 +69,23 @@ const USABILITY = {
   'tanstack-virtual': { fixed: 0, rowHeight: 1, hVirtual: 0, width: 1 },
   // 注：vue-virtual-scroller / virtua / vueuc(VirtualList) 为通用虚拟列表，不属于表格组件，
   // 已从应用移除、不参与测试与排名（代码保留于 src/vue/ 下）
+};
+
+// 易用性主观评分（5 分制，0.5 分档）：作者在接入本项目（10000 行 × 40 列、左右固定列、横纵虚拟滚动）
+// 过程中的主观体验评价，评估维度：配置复杂度 / 文档质量 / 类型提示与 API 设计 / 开箱即用程度
+const EASE_OF_USE = {
+  'stk-table-vue': { score: 4.5, note: '配置简洁、API 直观，文档完善，开箱即用' },
+  'vxe-table': { score: 3, note: '功能全面但配置项繁多，文档庞大，学习成本高' },
+  'naive-ui': { score: 4.5, note: '类型提示完善、文档清晰，虚拟表格开箱即用' },
+  'element-plus': { score: 4, note: '中文文档完善、生态成熟，TableV2 部分能力需自行封装' },
+  'arco-design': { score: 3.5, note: 'API 简洁、文档清晰，但大数据场景能力薄弱' },
+  tdesign: { score: 3, note: '上手简单但文档细节一般，虚拟滚动配置需自行探索' },
+  'ant-design-vue(surely-vue)': { score: 3, note: '继承 antd 配置体系，文档较少，hVirtual 启用需摸索' },
+  vuetify: { score: 3.5, note: '文档完善、风格规范统一，虚拟表格 API 版本间变动大' },
+  primevue: { score: 3, note: '文档丰富但 v4 主题体系需额外配置，上手易踩坑' },
+  'v-table': { score: 3, note: 'canvas 渲染模型特殊，配置模型学习成本较高' },
+  'ag-grid': { score: 3.5, note: '文档与示例完善、功能强大，但概念较多且社区版有功能限制' },
+  'tanstack-virtual': { score: 3, note: 'headless API 简洁，但 UI、固定列、表头全需手写' },
 };
 
 // 读取组件库实际安装版本（读不到时返回空串）
@@ -523,6 +541,7 @@ async function main() {
       heapDeltaMB: +((heap1 - heap0) / 1048576).toFixed(1),
       timeout: render.timeout,
       usability,
+      easeOfUse: EASE_OF_USE[label] || { score: 0, note: '' },
     });
     const r = results[results.length - 1];
     console.log(
@@ -554,6 +573,7 @@ async function main() {
       '堆增量(MB)': r.heapDeltaMB,
       '可用性(x/4)':
         r.usability.fixed + r.usability.rowHeight + r.usability.hVirtual + r.usability.width + '/4',
+      '易用性(x/5)': (r.easeOfUse && r.easeOfUse.score) || '-',
     })),
   );
 
@@ -569,6 +589,8 @@ async function main() {
     const part = results.filter(r => r.usability[key] === 0.5).length;
     console.log(`  可用性·${name}: 支持 ${ok}/${results.length}，部分 ${part}/${results.length}`);
   }
+  const easeAvg = (results.reduce((s, r) => s + (r.easeOfUse?.score || 0), 0) / results.length).toFixed(1);
+  console.log(`  易用性·主观评分: 平均 ${easeAvg}/5（最高 ${Math.max(...results.map(r => r.easeOfUse?.score || 0))}）`);
 
   const jsonPath = path.join(__dirname, 'perf-results.json');
   const reportPath = path.join(__dirname, 'perf-report.html');

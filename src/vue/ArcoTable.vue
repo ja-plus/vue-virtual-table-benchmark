@@ -9,12 +9,7 @@
       >
     </h2>
     <ul>
-      <li>fixed right 覆盖fixed left</li>
-      <li>虚拟列表不支持固定列</li>
-      <li>同antdv 要配置scroll x</li>
-      <li>要配置可视区高度</li>
       <li>行高配置未找到</li>
-      <li>不好用。宽度小时，滚动有问题。</li>
     </ul>
 
     <Table

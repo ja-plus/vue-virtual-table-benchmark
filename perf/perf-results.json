@@ -1,6 +1,10 @@
 [
   {
     "table": "stk-table-vue",
+    "easeOfUse": {
+      "score": 4.5,
+      "note": "配置简洁、API 直观，文档完善，开箱即用"
+    },
     "version": "1.1.0",
     "renderMs": 308,
     "firstPaintMs": 60,
@@ -27,6 +31,10 @@
   },
   {
     "table": "vxe-table",
+    "easeOfUse": {
+      "score": 3,
+      "note": "功能全面但配置项繁多，文档庞大，学习成本高"
+    },
     "version": "4.20.12",
     "renderMs": 1066,
     "firstPaintMs": 0,
@@ -53,6 +61,10 @@
   },
   {
     "table": "naive-ui",
+    "easeOfUse": {
+      "score": 4.5,
+      "note": "类型提示完善、文档清晰，虚拟表格开箱即用"
+    },
     "version": "2.44.1",
     "renderMs": 383,
     "firstPaintMs": 53,
@@ -73,12 +85,16 @@
     "usability": {
       "fixed": 1,
       "rowHeight": 0.5,
-      "hVirtual": 0,
+      "hVirtual": 0.5,
       "width": 1
     }
   },
   {
     "table": "element-plus",
+    "easeOfUse": {
+      "score": 4,
+      "note": "中文文档完善、生态成熟，TableV2 部分能力需自行封装"
+    },
     "version": "2.14.4",
     "renderMs": 352,
     "firstPaintMs": 65,
@@ -105,6 +121,10 @@
   },
   {
     "table": "arco-design",
+    "easeOfUse": {
+      "score": 3.5,
+      "note": "API 简洁、文档清晰，但大数据场景能力薄弱"
+    },
     "version": "2.58.0",
     "renderMs": 529,
     "firstPaintMs": 0,
@@ -131,6 +151,10 @@
   },
   {
     "table": "tdesign",
+    "easeOfUse": {
+      "score": 3,
+      "note": "上手简单但文档细节一般，虚拟滚动配置需自行探索"
+    },
     "version": "1.20.6",
     "renderMs": 642,
     "firstPaintMs": 0,
@@ -157,6 +181,10 @@
   },
   {
     "table": "ant-design-vue(surely-vue)",
+    "easeOfUse": {
+      "score": 3,
+      "note": "继承 antd 配置体系，文档较少，hVirtual 启用需摸索"
+    },
     "version": "5.1.6",
     "renderMs": 481,
     "firstPaintMs": 0,
@@ -183,6 +211,10 @@
   },
   {
     "table": "vuetify",
+    "easeOfUse": {
+      "score": 3.5,
+      "note": "文档完善、风格规范统一，虚拟表格 API 版本间变动大"
+    },
     "version": "3.13.1",
     "renderMs": 751,
     "firstPaintMs": 0,
@@ -209,6 +241,10 @@
   },
   {
     "table": "primevue",
+    "easeOfUse": {
+      "score": 3,
+      "note": "文档丰富但 v4 主题体系需额外配置，上手易踩坑"
+    },
     "version": "4.5.5",
     "renderMs": 1184,
     "firstPaintMs": 0,
@@ -235,6 +271,10 @@
   },
   {
     "table": "v-table",
+    "easeOfUse": {
+      "score": 3,
+      "note": "canvas 渲染模型特殊，配置模型学习成本较高"
+    },
     "version": "1.26.6",
     "renderMs": 536,
     "firstPaintMs": 74,
@@ -261,6 +301,10 @@
   },
   {
     "table": "ag-grid",
+    "easeOfUse": {
+      "score": 3.5,
+      "note": "文档与示例完善、功能强大，但概念较多且社区版有功能限制"
+    },
     "version": "36.1.0",
     "renderMs": 449,
     "firstPaintMs": 0,
@@ -287,6 +331,10 @@
   },
   {
     "table": "tanstack-virtual",
+    "easeOfUse": {
+      "score": 3,
+      "note": "headless API 简洁，但 UI、固定列、表头全需手写"
+    },
     "version": "3.13.35",
     "renderMs": 313,
     "firstPaintMs": 57,

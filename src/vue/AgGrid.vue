@@ -43,7 +43,15 @@ const columnDefs = computed(() =>
     headerClass: it.headerClassName,
     cellClass: it.className,
     textAlign: it.align,
-    headerClass: it.headerAlign ? `text-${it.headerAlign}` : '',
+    headerStyle: it.headerAlign ? { textAlign: it.headerAlign } : undefined,
   })),
 );
 </script>
+
+<style>
+/* ag-grid 36 主题默认无纵向格线，CSS 补上与横线同色（新版主题类为动态 ag-theme-inherit-*，改用根容器选择器） */
+.ag-root-wrapper .ag-header-cell,
+.ag-root-wrapper .ag-cell {
+  border-right: 1px solid var(--ag-border-color);
+}
+</style>

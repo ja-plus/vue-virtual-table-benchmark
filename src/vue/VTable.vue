@@ -17,13 +17,18 @@ const columns = tableColumns.map(it => {
 });
 
 onMounted(() => {
-  const tableInstance = new ListTable(tableRef.value, {
+  new ListTable(tableRef.value, {
     records: tableData,
     columns,
     widthMode: 'standard',
     defaultRowHeight: 28,
     frozenColCount: 2,
     rightFrozenColCount: 2,
+    theme: {
+      defaultStyle: { borderColor: '#e1e4e8', borderLineWidth: 1 },
+      headerStyle: { borderColor: '#e1e4e8', borderLineWidth: 1 },
+      bodyStyle: { borderColor: '#e1e4e8', borderLineWidth: 1 },
+    },
   });
 });
 </script>

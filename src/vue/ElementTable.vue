@@ -47,18 +47,33 @@ const columns = computed(() =>
 const wrapRef = ref(null);
 const tableWidth = ref(0);
 let resizeObserver;
+let rafId;
 onMounted(() => {
   resizeObserver = new ResizeObserver(entries => {
     for (const entry of entries) {
       const width = Math.floor(entry.contentRect.width);
-      if (width > 0) {
-        tableWidth.value = width;
+      // 宽度无变化时跳过；更新推迟到下一帧，避免在 observer 回调中同步触发布局
+      // 变化形成循环，触发 "ResizeObserver loop completed with undelivered notifications"
+      if (width > 0 && width !== tableWidth.value) {
+        cancelAnimationFrame(rafId);
+        rafId = requestAnimationFrame(() => {
+          tableWidth.value = width;
+        });
       }
     }
   });
   resizeObserver.observe(wrapRef.value);
 });
 onBeforeUnmount(() => {
+  cancelAnimationFrame(rafId);
   resizeObserver?.disconnect();
 });
 </script>
+
+<style>
+/* TableV2 无 bordered 配置，竖线用 CSS 补：与其它表格保持纵向格线一致 */
+.el-table-v2__header-cell,
+.el-table-v2__row-cell {
+  border-right: 1px solid var(--el-table-border-color, #ebeef5);
+}
+</style>
