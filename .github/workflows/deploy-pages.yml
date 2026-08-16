@@ -1,0 +1,44 @@
+# 将 perf/perf-report.html 发布到 GitHub Pages
+# 触发方式：
+#   1. push 到 master / main（报告随 perf/ 目录变更自动更新）
+#   2. Actions 页面手动触发 workflow_dispatch
+name: Deploy perf report to GitHub Pages
+
+on:
+  push:
+    branches: [master, main]
+    paths:
+      - perf/**
+      - .github/workflows/deploy-pages.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: perf/perf-report.html
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

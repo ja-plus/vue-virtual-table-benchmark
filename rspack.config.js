@@ -22,7 +22,7 @@ module.exports =
       open: true,
     },
     resolve: {
-      extensions: ['...', '.ts', '.json'], // 解析扩展。（当我们通过路导入文件，找不到改文件时，会尝试加入这些后缀继续寻找文件）
+      extensions: ['...', '.json'], // 解析扩展。（当我们通过路导入文件，找不到改文件时，会尝试加入这些后缀继续寻找文件）
       alias: {
         '@': path.join(__dirname, 'src'), // 在项目中使用@符号代替src路径，导入文件路径更方便
       },
@@ -30,23 +30,10 @@ module.exports =
     module: {
       rules: [
         {
-          test: /\.jsx$/, // 一个匹配loaders所处理的文件的拓展名的正则表达式，这里用来匹配js和jsx文件（必须）
-          exclude: /node_modules/, // 屏蔽不需要处理的文件（文件夹）（可选）
-          loader: 'babel-loader', // loader的名称（必须）
-        },
-        {
           test: /\.m?(t|j)s$/,
           // exclude: /node_modules/,
           // loader: 'ts-loader',
           loader: 'builtin:swc-loader',
-        },
-        {
-          test: /lit[\\/].*\.ts$/,
-          loader: 'ts-loader',
-        },
-        {
-          test: /\.svelte$/,
-          loader: 'svelte-loader',
         },
         {
           test: /\.vue$/,

@@ -3,10 +3,10 @@
  *
  * 测试项：
  *  1. 渲染性能：点击 Tab → 表格 DOM 稳定（含异步 chunk 加载）的耗时、首次出现时间、长任务阻塞
- *  2. 滚动性能：程序化驱动纵向滚动（先下到底再回顶部），用 rAF 采集帧间隔
- *     指标：平均 FPS / 1% low FPS / 最差帧耗时(p99) / 掉帧数(>33.4ms)
+ *  2. 滚动性能：无白屏内容跟随驱动纵向滚动（仅当视口内容就绪才推进，全程不白屏）
+ *     核心指标：无白屏滚动速度（px/s）；伴随指标：平均 FPS / 1% low FPS / 掉帧数 / 白屏率校验
  *
- * 流程：rspack build 生产构建 → 内置静态服务器托管 dist → Playwright(headless chromium) 逐 Tab 测量
+ * 流程：rspack build 生产构建 → 内置静态服务器托管 dist → Playwright(headed chromium) 逐 Tab 测量
  *      → 生成 perf-results.json + perf-report.html(echarts 可视化) → 启动报告服务并自动打开浏览器
  *
  * 用法：npm run perf
@@ -25,11 +25,37 @@ const PORT = 8091;
 const REPORT_PORT = 8093; // 报告服务端口
 const BASE_URL = `http://127.0.0.1:${PORT}/`;
 
-const SCROLL_DURATION = 12000; // 单次滚动会话超时上限（ms），内容跟随时序下实际用时因表格而异
-const MAX_SCROLL_PX = 25000; // 单次滚动距离上限（px），足够充分触发虚拟滚动，避免全程滚动耗时过长
+const SCROLL_DURATION = 12000; // 单次滚动会话超时上限（ms），慢表格超时时以实际进度计算吞吐量
+const MAX_SCROLL_PX = 6000; // 单方向滚动距离上限（px），足够反复穿越虚拟滚动窗口
 const SCROLL_ROUNDS = 2; // 正式测量轮数，取各指标中位数降低抖动
 const WARMUP_ROUNDS = 1; // 预热轮数（结果丢弃，消除 JIT 冷启动偏差）
 const RENDER_TIMEOUT = 30000; // 渲染稳定等待超时（ms）
+
+// 表格 label → npm 包名（用于读取实际安装版本，显示在报告标题中）
+const PACKAGE_OF = {
+  'stk-table-vue': 'stk-table-vue',
+  'vxe-table': 'vxe-table',
+  'naive-ui': 'naive-ui',
+  'element-plus': 'element-plus',
+  'arco-design': '@arco-design/web-vue',
+  tdesign: 'tdesign-vue-next',
+  'ant-design-vue(surely-vue)': '@surely-vue/table',
+  'v-table': '@visactor/vtable',
+  'ag-grid': 'ag-grid-vue3',
+  'tanstack-table': '@tanstack/vue-table',
+};
+
+// 读取组件库实际安装版本（读不到时返回空串）
+async function versionOf(label) {
+  const pkg = PACKAGE_OF[label];
+  if (!pkg) return '';
+  try {
+    const pkgJson = JSON.parse(await readFile(path.join(ROOT, 'node_modules', pkg, 'package.json'), 'utf-8'));
+    return pkgJson.version || '';
+  } catch {
+    return '';
+  }
+}
 
 // ---------------- 构建 ----------------
 function build() {
@@ -116,10 +142,11 @@ const waitRenderStable = async timeoutMs => {
   return { ms: performance.now() - start, firstPaint, nodes: prev, timeout: true };
 };
 
-// 滚动会话：JS 逐步驱动 scrollTop（三角波：先到底再回顶）+ 同时采集帧间隔
-// 每步推进后等待视口内出现真实行内容才继续（内容跟随时序），保证虚拟表格滚动不白屏
-// canvas 类表格（如 VTable）没有可滚动 DOM，退化为节流 wheel 事件驱动
-const runScrollSession = ({ timeoutMs, maxScrollPx }) => {
+// 滚动会话：无白屏内容跟随驱动——仅当视口内容渲染就绪才推进下一步，全程不出现白屏
+// 核心指标 = 无白屏滚动速度（px/s）：表格保持内容可见的前提下能滚多快，慢表格自动得低分
+// FPS/1%low 为各自极限速度下的伴随指标；canvas 类表格（如 VTable）没有可滚动 DOM，退化为 wheel 事件驱动
+const runScrollSession = args => {
+  const { timeoutMs, maxScrollPx } = args;
   // 帧采集：外部通过 stop() 结束（page.evaluate 序列化函数须自包含，故定义在内部）
   const startCollect = () => {
     const frames = [];
@@ -164,82 +191,119 @@ const runScrollSession = ({ timeoutMs, maxScrollPx }) => {
   const el = findScrollContainer();
   const panel = getPanelRoot();
 
-  // 视口内是否已有真实行内容（白屏检测：可见行覆盖 ≥60% 且行内有真实文本）
-  // 虚拟表格复用行时元素先占位、内容后填充，仅查覆盖会误判放行导致闪白
+  // 视口内是否已有真实行内容（白屏检测：可见行覆盖 ≥60% 且视口内行有真实文本）
+  // 虚拟表格复用行时元素先占位、内容后填充，仅查覆盖会误判
+  // 文本校验在 panel 范围扫描：vxe/element 的固定列渲染在滚动容器外的独立层，只查容器内会永远误判为白屏
+  const ROW_SEL =
+    'tr, [class*="row"], [class*="Row"], [class*="item"], [class*="Item"], [class*="cell-group"]';
   const contentReady = () => {
     const er = el.getBoundingClientRect();
     let cover = 0;
-    let hasText = false;
-    for (const r of el.querySelectorAll(
-      'tr, [class*="row"], [class*="Row"], [class*="item"], [class*="Item"], [class*="cell-group"]',
-    )) {
+    for (const r of el.querySelectorAll(ROW_SEL)) {
       const b = r.getBoundingClientRect();
       if (b.height < 5 || b.width < 50) continue;
       const top = Math.max(b.top, er.top);
       const bot = Math.min(b.bottom, er.bottom);
       if (bot - top <= 0) continue;
       cover += bot - top;
-      if (!hasText && r.textContent.trim()) hasText = true;
-      if (cover >= er.height * 0.6 && hasText) return true;
+      if (cover >= er.height * 0.6) break;
+    }
+    if (cover < er.height * 0.6) return false;
+    for (const r of panel.querySelectorAll(ROW_SEL)) {
+      const b = r.getBoundingClientRect();
+      if (b.bottom < er.top || b.top > er.bottom) continue;
+      if (b.right < er.left || b.left > er.right) continue;
+      if (r.textContent.trim()) return true;
     }
     return false;
   };
 
-  const driveScroll = () =>
+  const driveScroll = ({ timeoutMs: timeout }) =>
     new Promise(resolve => {
-      if (!el) return resolve({ method: 'none', moved: 0 });
-      // 滚动距离限幅：充分触发虚拟化即可，避免 10000 行全程滚动耗时过长
+      if (!el) return resolve({ method: 'none', moved: 0, pxPerSec: 0, blankPct: 0 });
       const max = Math.min(el.scrollHeight - el.clientHeight, maxScrollPx);
-      if (max <= 0) return resolve({ method: 'no-scroll', moved: 0 });
+      if (max <= 0) return resolve({ method: 'no-scroll', moved: 0, pxPerSec: 0, blankPct: 0 });
       el.scrollTop = 0;
       const viewH = el.clientHeight || 600;
-      const stepPx = Math.max(120, Math.min(400, Math.round(viewH * 0.35)));
-      const totalFrames = Math.ceil(max / stepPx);
-      const peakFrame = Math.ceil(totalFrames / 2);
-      const deadline = performance.now() + timeoutMs;
-      let f = 0;
-      let peak = 0;
-      const step = () => {
-        if (performance.now() > deadline) {
-          return resolve({ method: 'scroll', moved: Math.round(peak), timeout: true });
+      // 按整页（视口高度）滚动：贴近手动翻页节奏，对渲染能力是更强的压力测试
+      const stepPx = Math.round(viewH);
+      const deadline = performance.now() + timeout;
+      const t0 = performance.now();
+      let dist = 0;
+      let timedOut = false;
+      // 白屏采样：理论上内容跟随永不为空，非零值说明提交瞬间缓冲不足或检测抖动
+      let blankFrames = 0;
+      let totalFrames = 0;
+      let readyHits = 0;
+      let blank = false;
+      let stuckFrames = 0;
+      const sample = () => {
+        if (dist >= max) return;
+        totalFrames++;
+        if (contentReady()) {
+          if (++readyHits >= 2) blank = false;
+        } else {
+          readyHits = 0;
+          blank = true;
         }
-        f++;
-        el.scrollTop =
-          f <= peakFrame
-            ? Math.min(f * stepPx, max)
-            : Math.max(max - (f - peakFrame) * stepPx, 0);
-        peak = Math.max(peak, el.scrollTop);
-        const done = f >= totalFrames;
-        // 连续 2 帧内容就绪（无白屏）或超时 150ms 后才推进下一步，避免复用行未填充就跳步导致闪烁
-        requestAnimationFrame(() => {
-          const w0 = performance.now();
-          let hits = 0;
-          const proceed = () => {
-            if (done) resolve({ method: 'scroll', moved: Math.round(peak) });
-            else requestAnimationFrame(step);
-          };
-          const poll = () => {
-            if (contentReady()) {
-              if (++hits >= 2) return proceed();
-            } else {
-              hits = 0;
-              if (performance.now() - w0 > 150) return proceed();
-            }
-            requestAnimationFrame(poll);
-          };
-          poll();
+        if (blank && totalFrames > 5) blankFrames++;
+        requestAnimationFrame(sample);
+      };
+      const finish = () => {
+        const dt = (performance.now() - t0) / 1000;
+        return resolve({
+          method: 'scroll',
+          moved: Math.round(dist),
+          timeout: timedOut,
+          pxPerSec: dt > 0.2 ? Math.round(dist / dt) : 0,
+          blankPct: totalFrames ? +((blankFrames / totalFrames) * 100).toFixed(1) : 0,
         });
       };
+      const commit = () => {
+        dist = Math.min(dist + stepPx, max);
+        el.scrollTop = dist;
+        // 容器拒绝滚动（scrollTop 始终上不去）时判为无效，避免空转满超时
+        if (el.scrollTop < 5 && dist < max && ++stuckFrames > 30) {
+          return resolve({ method: 'no-scroll', moved: 0, pxPerSec: 0, blankPct: 0 });
+        }
+        requestAnimationFrame(step);
+      };
+      const step = () => {
+        if (dist >= max) return finish();
+        if (performance.now() > deadline) {
+          timedOut = true;
+          return finish();
+        }
+        // 内容就绪门控：连续 2 帧确认可见内容完整才提交下一步，保证全程无白屏
+        const w0 = performance.now();
+        let hits = 0;
+        const poll = () => {
+          if (performance.now() > deadline) {
+            timedOut = true;
+            return finish();
+          }
+          if (contentReady()) {
+            if (++hits >= 2) return commit();
+          } else {
+            hits = 0;
+            // 兜底：长时间不就绪（如检测误判）仍放行，避免卡死；此路径会产生白屏帧并被采样计入
+            if (performance.now() - w0 > 300) return commit();
+          }
+          requestAnimationFrame(poll);
+        };
+        poll();
+      };
+      requestAnimationFrame(sample);
       requestAnimationFrame(step);
     });
 
   const driveWheel = () =>
     new Promise(resolve => {
-      // canvas 表格无可滚动 DOM：高频 wheel 模拟手动快速拖动滚动条（每帧一次、步长约一个视口），
+      // canvas 表格无可滚动 DOM：高频 wheel 模拟手动快速翻页（每帧一次、每次一整页），
       // canvas 重绘是同步的，不存在白屏，无需节流，压力贴近手动拖动的真实体感
       const target = panel.querySelector('canvas') || panel;
       const r = target.getBoundingClientRect();
-      const stepY = Math.max(400, r.height * 0.9);
+      const stepY = Math.max(400, r.height);
       const duration = timeoutMs;
       const start = performance.now();
       let down = true;
@@ -265,7 +329,7 @@ const runScrollSession = ({ timeoutMs, maxScrollPx }) => {
     });
 
   const collector = startCollect();
-  return (el ? driveScroll() : driveWheel()).then(drive => {
+  return (el ? driveScroll(args) : driveWheel()).then(drive => {
     collector.stop();
     return { frames: collector.frames, ...drive };
   });
@@ -278,9 +342,9 @@ const median = arr => {
 };
 
 function frameStats(frames) {
-  if (!frames.length) return null;
-  // 丢弃开头 5 帧：rAF 启动瞬间及驱动函数刚执行的抖动
+  // 丢弃开头 5 帧：rAF 启动瞬间及驱动函数刚执行的抖动；会话过短无有效样本时返回 null
   frames = frames.slice(5);
+  if (!frames.length) return null;
   const total = frames.reduce((a, b) => a + b, 0);
   const avgFps = (frames.length / total) * 1000;
   const sorted = [...frames].sort((a, b) => b - a);
@@ -358,6 +422,7 @@ async function main() {
   for (let i = 0; i < buttons.length; i++) {
     if (skip.has(i)) continue;
     const label = labels[i].trim();
+    const version = await versionOf(label);
     process.stdout.write(`  测试 ${label.padEnd(16)}`);
 
     await page.evaluate(() => (window.__longTasks.length = 0));
@@ -375,6 +440,8 @@ async function main() {
     let method = 'none';
     let moved = 0;
     const roundStats = [];
+    const roundBlanks = [];
+    const roundPxs = [];
     const ltScrollAll = [];
     for (let round = 0; round < WARMUP_ROUNDS + SCROLL_ROUNDS; round++) {
       await page.evaluate(() => (window.__longTasks.length = 0));
@@ -384,6 +451,8 @@ async function main() {
       });
       method = s.method;
       moved = Math.max(moved, s.moved);
+      if (typeof s.blankPct === 'number') roundBlanks.push(s.blankPct);
+      if (typeof s.pxPerSec === 'number') roundPxs.push(s.pxPerSec);
       const lt = await page.evaluate(() => window.__longTasks.slice());
       if (round >= WARMUP_ROUNDS) {
         roundStats.push(frameStats(s.frames));
@@ -410,12 +479,15 @@ async function main() {
     const sum = arr => Math.round(arr.reduce((a, b) => a + b, 0));
     results.push({
       table: label,
+      version,
       renderMs,
       firstPaintMs: Math.round(render.firstPaint),
       domNodes: render.nodes,
       renderLongTaskMs: sum(ltRender),
       scrollMethod: method,
       scrolledPx: moved,
+      pxPerSec: roundPxs.length ? Math.round(median(roundPxs)) : '-',
+      blankPct: roundBlanks.length ? +median(roundBlanks).toFixed(1) : '-',
       avgFps: stats?.avgFps ?? '-',
       lowFps1pct: stats?.lowFps1pct ?? '-',
       p99FrameMs: stats?.p99FrameMs ?? '-',
@@ -427,7 +499,7 @@ async function main() {
     });
     const r = results[results.length - 1];
     console.log(
-      ` 渲染 ${r.renderMs}ms | 平均 ${r.avgFps}fps | 1%low ${r.lowFps1pct}fps | 掉帧 ${r.droppedFrames}`,
+      ` 渲染 ${r.renderMs}ms | 无白屏速度 ${r.pxPerSec}px/s | 平均 ${r.avgFps}fps | 1%low ${r.lowFps1pct}fps | 白屏 ${r.blankPct}%`,
     );
   }
 
@@ -444,6 +516,8 @@ async function main() {
       '渲染长任务(ms)': r.renderLongTaskMs,
       滚动方式: r.scrollMethod,
       '实际滚动(px)': r.scrolledPx,
+      '无白屏速度(px/s)': r.pxPerSec,
+      '白屏率(%)': r.blankPct,
       '平均FPS': r.avgFps,
       '1%low FPS': r.lowFps1pct,
       'p99帧(ms)': r.p99FrameMs,
@@ -465,7 +539,10 @@ async function main() {
   const html = template
     .replaceAll('__DATA__', () => JSON.stringify(results))
     .replaceAll('__META__', () =>
-      JSON.stringify({ time: new Date().toLocaleString(), scrollDuration: SCROLL_DURATION }),
+      JSON.stringify({
+        time: new Date().toLocaleString(),
+        scrollDuration: SCROLL_DURATION,
+      }),
     );
   await writeFile(reportPath, html, 'utf-8');
   console.log(`原始数据: ${jsonPath}`);
