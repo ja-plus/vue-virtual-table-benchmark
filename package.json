@@ -13,8 +13,6 @@
   "license": "ISC",
   "dependencies": {
     "@arco-design/web-vue": "2.58.0",
-    "@rspack/cli": "^2.1.10",
-    "@rspack/core": "^2.1.10",
     "@surely-vue/table": "^5.1.6",
     "@tanstack/vue-table": "^8.21.3",
     "@tanstack/vue-virtual": "^3.13.35",
@@ -31,6 +29,8 @@
     "xe-utils": "4.0.12"
   },
   "devDependencies": {
+    "@rspack/cli": "^2.1.10",
+    "@rspack/core": "^2.1.10",
     "@rspack/dev-server": "^2.2.0",
     "css-loader": "^6.6.0",
     "eslint": "8.57.0",

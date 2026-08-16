@@ -11,12 +11,6 @@ importers:
       '@arco-design/web-vue':
         specifier: 2.58.0
         version: 2.58.0(vue@3.5.41(typescript@5.9.2))
-      '@rspack/cli':
-        specifier: ^2.1.10
-        version: 2.1.10(@rspack/core@2.1.10)(@rspack/dev-server@2.2.0(@rspack/core@2.1.10))
-      '@rspack/core':
-        specifier: ^2.1.10
-        version: 2.1.10
       '@surely-vue/table':
         specifier: ^5.1.6
         version: 5.1.6(vue@3.5.41(typescript@5.9.2))
@@ -60,6 +54,12 @@ importers:
         specifier: 4.0.12
         version: 4.0.12
     devDependencies:
+      '@rspack/cli':
+        specifier: ^2.1.10
+        version: 2.1.10(@rspack/core@2.1.10)(@rspack/dev-server@2.2.0(@rspack/core@2.1.10))
+      '@rspack/core':
+        specifier: ^2.1.10
+        version: 2.1.10
       '@rspack/dev-server':
         specifier: ^2.2.0
         version: 2.2.0(@rspack/core@2.1.10)
