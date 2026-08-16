@@ -1,15 +1,12 @@
-# 将 perf/perf-report.html 发布到 GitHub Pages
+# 构建应用并发布到 GitHub Pages（站点根 = 应用首页 index.html，另附性能报告 perf-report.html）
 # 触发方式：
-#   1. push 到 master / main（报告随 perf/ 目录变更自动更新）
+#   1. push 到 master / main（源码或报告变更自动重新构建发布）
 #   2. Actions 页面手动触发 workflow_dispatch
-name: Deploy perf report to GitHub Pages
+name: Deploy to GitHub Pages
 
 on:
   push:
     branches: [master, main]
-    paths:
-      - perf/**
-      - .github/workflows/deploy-pages.yml
   workflow_dispatch:
 
 permissions:
@@ -31,12 +28,29 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build
+        run: npm run build
+
       - name: Setup Pages
         uses: actions/configure-pages@v5
 
-      - name: Prepare report directory
+      - name: Prepare publish directory
         run: |
           mkdir -p public-report
+          cp -r dist/* public-report/
           cp perf/perf-report.html public-report/
 
       - name: Upload artifact
