@@ -3,7 +3,6 @@
 #   1. push 到 master / main（报告随 perf/ 目录变更自动更新）
 #   2. Actions 页面手动触发 workflow_dispatch
 name: Deploy perf report to GitHub Pages
-# 2026-08-16: init deploy workflow
 
 on:
   push:
@@ -35,10 +34,16 @@ jobs:
       - name: Setup Pages
         uses: actions/configure-pages@v5
 
+      - name: Prepare report directory
+        run: |
+          mkdir -p public-report
+          cp perf/perf-report.html public-report/
+
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: perf/perf-report.html
+          # upload-pages-artifact@v3 的 path 必须是目录，不支持单文件
+          path: public-report
 
       - name: Deploy to GitHub Pages
         id: deployment
