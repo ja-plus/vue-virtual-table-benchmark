@@ -63,21 +63,8 @@ const tabs = [
     label: 'tanstack-virtual',
     comp: defineAsyncComponent(() => import('./TanStackVirtualTable.vue')),
   },
-  {
-    key: 'virtual-scroller',
-    label: 'vue-virtual-scroller',
-    comp: defineAsyncComponent(() => import('./VirtualScrollerTable.vue')),
-  },
-  {
-    key: 'virtua',
-    label: 'virtua',
-    comp: defineAsyncComponent(() => import('./VirtuaTable.vue')),
-  },
-  {
-    key: 'vueuc-virtual-list',
-    label: 'vueuc(VirtualList)',
-    comp: defineAsyncComponent(() => import('./VueucVirtualList.vue')),
-  },
+  // 注：vue-virtual-scroller / virtua / vueuc(VirtualList) 为通用虚拟列表组件，
+  // 不属于表格组件，不加入排名；实现代码保留在 VirtualScrollerTable / VirtuaTable / VueucVirtualList.vue
 ];
 
 const activeTab = shallowRef(tabs[0]);

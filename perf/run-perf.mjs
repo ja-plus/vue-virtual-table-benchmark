@@ -44,10 +44,30 @@ const PACKAGE_OF = {
   'ag-grid': 'ag-grid-vue3',
   vuetify: 'vuetify',
   primevue: 'primevue',
-  'vue-virtual-scroller': 'vue-virtual-scroller',
-  virtua: 'virtua',
-  'vueuc(VirtualList)': 'vueuc',
   'tanstack-virtual': '@tanstack/vue-virtual',
+};
+
+// 可用性特性配置（取值 1=支持，0.5=部分支持，0=不支持）：
+//   fixed     = 左右固定列
+//   rowHeight = 行高控制（原生支持；需 CSS 压缩实现计 0.5）
+//   hVirtual  = 横向虚拟列表（列级虚拟化，只渲染可见列；整行渲染仅容器横向滚动计 0）
+//   width     = 宽度控制（容器宽度自适应铺满；需外部 ResizeObserver 等 JS 动态控制计 0.5）
+// 依据：各组件模板顶部 ul > li 标注及组件实际配置（virtual-x / fixed / rowHeight 等）
+const USABILITY = {
+  'stk-table-vue': { fixed: 1, rowHeight: 1, hVirtual: 1, width: 1 },
+  'vxe-table': { fixed: 1, rowHeight: 1, hVirtual: 1, width: 1 },
+  'naive-ui': { fixed: 1, rowHeight: 0.5, hVirtual: 0, width: 1 },
+  'element-plus': { fixed: 1, rowHeight: 1, hVirtual: 0, width: 0.5 },
+  'arco-design': { fixed: 0, rowHeight: 0, hVirtual: 0, width: 1 },
+  tdesign: { fixed: 0.5, rowHeight: 0.5, hVirtual: 0, width: 1 },
+  'ant-design-vue(surely-vue)': { fixed: 1, rowHeight: 0.5, hVirtual: 1, width: 1 },
+  vuetify: { fixed: 0, rowHeight: 1, hVirtual: 0, width: 1 },
+  primevue: { fixed: 1, rowHeight: 0.5, hVirtual: 0, width: 1 },
+  'v-table': { fixed: 1, rowHeight: 1, hVirtual: 1, width: 1 },
+  'ag-grid': { fixed: 1, rowHeight: 1, hVirtual: 1, width: 1 },
+  'tanstack-virtual': { fixed: 0, rowHeight: 1, hVirtual: 0, width: 1 },
+  // 注：vue-virtual-scroller / virtua / vueuc(VirtualList) 为通用虚拟列表，不属于表格组件，
+  // 已从应用移除、不参与测试与排名（代码保留于 src/vue/ 下）
 };
 
 // 读取组件库实际安装版本（读不到时返回空串）
@@ -482,6 +502,7 @@ async function main() {
     const heap1 = await page.evaluate(() => performance.memory?.usedJSHeapSize || 0);
 
     const sum = arr => Math.round(arr.reduce((a, b) => a + b, 0));
+    const usability = USABILITY[label] || { fixed: 0, rowHeight: 0, hVirtual: 0 };
     results.push({
       table: label,
       version,
@@ -501,6 +522,7 @@ async function main() {
       scrollLongTaskMs: sum(ltScroll),
       heapDeltaMB: +((heap1 - heap0) / 1048576).toFixed(1),
       timeout: render.timeout,
+      usability,
     });
     const r = results[results.length - 1];
     console.log(
@@ -530,8 +552,23 @@ async function main() {
       掉帧数: r.droppedFrames,
       '滚动长任务(ms)': r.scrollLongTaskMs,
       '堆增量(MB)': r.heapDeltaMB,
+      '可用性(x/4)':
+        r.usability.fixed + r.usability.rowHeight + r.usability.hVirtual + r.usability.width + '/4',
     })),
   );
+
+  // 可用性统计：各特性支持（含部分）的组件数量
+  const USABILITY_DIMS = [
+    ['fixed', '列固定'],
+    ['rowHeight', '行高控制'],
+    ['hVirtual', '横向虚拟列表'],
+    ['width', '宽度控制'],
+  ];
+  for (const [key, name] of USABILITY_DIMS) {
+    const ok = results.filter(r => r.usability[key] === 1).length;
+    const part = results.filter(r => r.usability[key] === 0.5).length;
+    console.log(`  可用性·${name}: 支持 ${ok}/${results.length}，部分 ${part}/${results.length}`);
+  }
 
   const jsonPath = path.join(__dirname, 'perf-results.json');
   const reportPath = path.join(__dirname, 'perf-report.html');

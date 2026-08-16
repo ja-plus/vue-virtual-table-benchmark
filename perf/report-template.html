@@ -17,6 +17,15 @@
   h1 { font-size: 24px; margin: 8px 0 4px; }
   h2 { font-size: 17px; margin: 28px 0 12px; border-left: 4px solid #5b8ff9; padding-left: 8px; }
   .meta { color: #888; font-size: 13px; line-height: 1.8; }
+  .rank-note {
+    font-size: 12px;
+    color: #874d00;
+    background: #fffbe6;
+    border: 1px solid #ffe58f;
+    border-radius: 6px;
+    padding: 8px 12px;
+    margin-top: 12px;
+  }
   .card {
     background: #fff;
     border-radius: 10px;
@@ -81,6 +90,25 @@
   td.best { color: #389e0d; font-weight: bold; background: #f6ffed; }
   td.worst { color: #cf1322; background: #fff1f0; }
   .table-scroll { overflow-x: auto; }
+  /* ---- 可用性对比 ---- */
+  .usability-stats { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 14px; }
+  .u-stat {
+    border: 1px solid #eee;
+    border-radius: 8px;
+    padding: 10px 16px;
+    min-width: 170px;
+    background: #fafbfc;
+  }
+  .u-name { font-size: 13px; color: #666; margin-bottom: 8px; }
+  .u-num { display: flex; gap: 14px; font-size: 13px; font-weight: 600; }
+  .u-num .u-total { color: #1f2329; }
+  #usabilityTable th { text-align: center; }
+  #usabilityTable td { text-align: center; }
+  #usabilityTable td:first-child { text-align: left; white-space: nowrap; }
+  #usabilityTable .u-score { font-weight: bold; color: #1f2329; }
+  .mark-ok { color: #389e0d; }
+  .mark-part { color: #d46b08; }
+  .mark-no { color: #cf1322; }
   /* ---- 条形图网格 ---- */
   .chart-grid {
     display: grid;
@@ -95,6 +123,10 @@
 <div class="container">
   <h1>表格性能自动化测试报告</h1>
   <div class="meta" id="meta"></div>
+  <div class="rank-note">
+    排名仅统计表格组件：vue-virtual-scroller、virtua、vueuc(VirtualList) 为通用虚拟列表组件，
+    不属于表格组件，不加入排名（实现代码保留于 src/vue/ 下，但未注册进应用）。
+  </div>
 
   <h2>综合评分雷达图</h2>
   <div class="card radar-wrap">
@@ -107,6 +139,21 @@
       <div class="pause-badge" id="pauseBadge">⏸ 已暂停（移开鼠标恢复）</div>
       <div id="legend"></div>
       <div class="progress"><div class="progress-bar" id="progressBar"></div></div>
+    </div>
+  </div>
+
+  <h2>可用性对比</h2>
+  <div class="card">
+    <div class="usability-stats" id="usabilityStats"></div>
+    <div class="table-scroll">
+      <table id="usabilityTable"></table>
+    </div>
+    <div class="note">
+      判定口径：列固定 = 是否支持左右固定列（TDesign 左右固定互斥计部分）；
+      行高控制 = 是否原生支持设置行高（经 CSS 压缩实现计部分，如 surely-vue / naive-ui / tdesign / primevue）；
+      横向虚拟列表 = 列级虚拟化，横向滚动只渲染可见列（整行渲染、仅容器横向滚动计不支持）；
+      宽度控制 = 容器宽度自适应铺满（element TableV2 需 ResizeObserver 动态控制计部分）。
+      ✓ 支持　△ 部分　✕ 不支持。
     </div>
   </div>
 
@@ -276,6 +323,67 @@
     progressEl.style.background = colorOf(curIdx);
   }, 50);
   showRadar(0);
+
+  // ---------------- 可用性对比 ----------------
+  var FEATURES = [
+    { key: 'fixed', name: '列固定' },
+    { key: 'rowHeight', name: '行高控制' },
+    { key: 'hVirtual', name: '横向虚拟列表' },
+    { key: 'width', name: '宽度控制' },
+  ];
+  function mark(v) {
+    if (v === 1) return '<span class="mark-ok">✓ 支持</span>';
+    if (v === 0.5) return '<span class="mark-part">△ 部分</span>';
+    return '<span class="mark-no">✕ 不支持</span>';
+  }
+
+  // 统计卡片：各特性支持/部分/不支持的数量 + 全部支持组件数
+  var statsHtml = FEATURES.map(function (f) {
+    var ok = 0;
+    var part = 0;
+    var no = 0;
+    DATA.forEach(function (d) {
+      var v = Number((d.usability || {})[f.key]);
+      if (v === 1) ok++;
+      else if (v === 0.5) part++;
+      else no++;
+    });
+    return (
+      '<div class="u-stat"><div class="u-name">' + f.name + '</div>' +
+      '<div class="u-num"><span class="mark-ok">✓ ' + ok + '</span>' +
+      '<span class="mark-part">△ ' + part + '</span>' +
+      '<span class="mark-no">✕ ' + no + '</span></div></div>'
+    );
+  }).join('');
+  var fullOk = DATA.filter(function (d) {
+    var u = d.usability || {};
+    return u.fixed === 1 && u.rowHeight === 1 && u.hVirtual === 1 && u.width === 1;
+  }).length;
+  statsHtml +=
+    '<div class="u-stat"><div class="u-name">四项全部支持</div>' +
+    '<div class="u-num"><span class="u-total">' + fullOk + '/' + DATA.length + '</span></div></div>';
+  document.getElementById('usabilityStats').innerHTML = statsHtml;
+
+  // 支持情况表格：按支持度降序排列
+  var uRows = DATA.map(function (d) {
+    var u = d.usability || {};
+    var score = FEATURES.reduce(function (s, f) { return s + (Number(u[f.key]) || 0); }, 0);
+    return { name: d.table, u: u, score: score };
+  }).sort(function (a, b) { return b.score - a.score; });
+  var uThead =
+    '<tr><th>表格</th>' +
+    FEATURES.map(function (f) { return '<th>' + f.name + '</th>'; }).join('') +
+    '<th>支持度</th></tr>';
+  var uTbody = uRows
+    .map(function (r) {
+      return (
+        '<tr><td>' + r.name + '</td>' +
+        FEATURES.map(function (f) { return '<td>' + mark(r.u[f.key]) + '</td>'; }).join('') +
+        '<td class="u-score">' + r.score + '/4</td></tr>'
+      );
+    })
+    .join('');
+  document.getElementById('usabilityTable').innerHTML = uThead + uTbody;
 
   // ---------------- 明细表 ----------------
   var TABLE_COLS = [
