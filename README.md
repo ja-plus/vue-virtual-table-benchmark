@@ -34,6 +34,6 @@ npm run perf
 
 ## 在线报告
 
-最新性能报告通过 GitHub Pages 发布：<https://ja-plus.github.io/vue-table-compare/perf-report.html>
+最新性能报告通过 GitHub Pages 发布：<https://ja-plus.github.io/vue-virtual-table-benchmark/perf-report.html>
 
 每次 push 到 `master`/`main` 时，GitHub Actions（`.github/workflows/deploy-pages.yml`）会自动将 `perf/perf-report.html` 部署到 Pages；也可在 Actions 页面手动触发 `workflow_dispatch` 发布。
