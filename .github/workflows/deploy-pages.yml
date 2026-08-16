@@ -3,6 +3,7 @@
 #   1. push 到 master / main（报告随 perf/ 目录变更自动更新）
 #   2. Actions 页面手动触发 workflow_dispatch
 name: Deploy perf report to GitHub Pages
+# 2026-08-16: init deploy workflow
 
 on:
   push:
