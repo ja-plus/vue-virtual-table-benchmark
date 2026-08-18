@@ -54,8 +54,8 @@ importers:
         specifier: 4.1.6
         version: 4.1.6
       stk-table-vue:
-        specifier: 1.1.0
-        version: 1.1.0
+        specifier: 1.2.0-beta.2
+        version: 1.2.0-beta.2
       tdesign-vue-next:
         specifier: 1.20.6
         version: 1.20.6(vue@3.5.41(typescript@5.9.2))
@@ -1842,8 +1842,8 @@ packages:
     resolution: {integrity: sha512-UjgapumWlbMhkBgzT7Ykc5YXUT46F0iKu8SGXq0bcwP5dz/h0Plj6enJqjz1Zbq2l5WaqYnrVbwWOWMyF3F47g==}
     engines: {node: '>=0.10.0'}
 
-  stk-table-vue@1.1.0:
-    resolution: {integrity: sha512-lPVBGZNuVGxSWq0k+XBGY00xStjplm4ckRIm/Zl83SAnxfMYUKQB0v/dEovAl/oARf9gq3/QvgZnTj93Bze66g==}
+  stk-table-vue@1.2.0-beta.2:
+    resolution: {integrity: sha512-qDtbxIsSNKJalIjXMWlEq8zLo8hCg+BRpLLegwsEjkQbZwmRc6cPTiTwHbqQO7begSJJD8JjAC8zgwsIJVxBFw==}
 
   stream-source@0.3.5:
     resolution: {integrity: sha512-ZuEDP9sgjiAwUVoDModftG0JtYiLUV8K4ljYD1VyUMRWtbVf92474o4kuuul43iZ8t/hRuiDAx1dIJSvirrK/g==}
@@ -3969,7 +3969,7 @@ snapshots:
 
   source-map@0.6.1: {}
 
-  stk-table-vue@1.1.0: {}
+  stk-table-vue@1.2.0-beta.2: {}
 
   stream-source@0.3.5: {}
 
