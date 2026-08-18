@@ -422,8 +422,6 @@
     progressEl.style.background = colorOf(curIdx);
   }, 50);
   showRadar(0);
-  // 确保布局完成后重新调整雷达图尺寸
-  requestAnimationFrame(function () { radarChart.resize(); });
 
   // ---------------- 功能丰富度对比 ----------------
   var FEATURES = [
