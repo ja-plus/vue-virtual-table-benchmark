@@ -8,6 +8,7 @@
       virtual-x
       scrollbar
       fixed-col-shadow
+      empty-cell-text=""
       :columns="tableColumns"
       :data-source="tableData"
     ></StkTable>

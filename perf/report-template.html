@@ -13,7 +13,7 @@
     background: #f5f6fa;
     color: #333;
   }
-  .container { max-width: 1200px; margin: 0 auto; padding: 20px 16px 60px; }
+  .container { max-width: 1200px; margin: 0 auto; padding: 20px 24px 60px; }
   h1 { font-size: 24px; margin: 8px 0 4px; }
   h2 { font-size: 17px; margin: 28px 0 12px; border-left: 4px solid #5b8ff9; padding-left: 8px; }
   .meta { color: #888; font-size: 13px; line-height: 1.8; }
@@ -40,10 +40,10 @@
     box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
   }
   /* ---- 雷达图区 ---- */
-  .radar-wrap { display: flex; gap: 16px; align-items: flex-start; flex-wrap: wrap; }
+  .radar-wrap { display: flex; gap: 16px; align-items: flex-start; }
   .radar-main { flex: 1; min-width: 420px; }
   #radar { width: 100%; height: 440px; }
-  .radar-side { width: 260px; display: flex; flex-direction: column; }
+  .radar-side { width: 230px; flex: none; display: flex; flex-direction: column;}
   .radar-current {
     font-size: 28px;
     font-weight: bold;
@@ -54,19 +54,7 @@
     justify-content: center;
     height: 32px;
   }
-  .radar-hint { font-size: 12px; color: #aaa; margin-bottom: 12px; }
-  .pause-badge {
-    visibility: hidden;
-    font-size: 12px;
-    color: #d46b08;
-    background: #fff7e6;
-    border: 1px solid #ffd591;
-    border-radius: 4px;
-    padding: 2px 8px;
-    margin-bottom: 10px;
-    width: fit-content;
-  }
-  #legend { display: flex; flex-direction: column; gap: 6px; overflow-y: auto; }
+  #legend { display: flex; flex-direction: column; overflow-y: auto }
   .legend-item {
     display: flex;
     align-items: center;
@@ -130,9 +118,75 @@
   }
   .chart-box { height: 360px; }
   .note { font-size: 12px; color: #999; line-height: 1.9; margin-top: 10px; }
+  /* ---- 右侧导航 ---- */
+  .side-nav {
+    position: fixed;
+    right: 12px;
+    bottom: 20px;
+    z-index: 100;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    background: rgba(255,255,255,0.92);
+    border: 1px solid #e8e8e8;
+    border-radius: 8px;
+    padding: 8px 6px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+  }
+  .side-nav-toggle {
+    display: block;
+    border: none;
+    background: none;
+    font-size: 20px;
+    line-height: 1;
+    cursor: pointer;
+    color: #555;
+    padding: 4px 10px;
+    border-radius: 4px;
+    width: 100%;
+    text-align: center;
+    transition: background 0.2s;
+  }
+  .side-nav-toggle:hover { background: #f0f5ff; }
+  .side-nav-links {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    overflow: hidden;
+    transition: max-height 0.35s ease, opacity 0.3s ease;
+    max-height: 300px;
+    opacity: 1;
+  }
+  .side-nav-links.collapsed {
+    max-height: 0;
+    opacity: 0;
+  }
+  .side-nav a {
+    display: block;
+    font-size: 12px;
+    color: #888;
+    text-decoration: none;
+    padding: 5px 10px;
+    border-radius: 4px;
+    white-space: nowrap;
+    transition: all 0.2s;
+    cursor: pointer;
+  }
+  .side-nav a:hover { color: #1677ff; background: #f0f5ff; }
+  .side-nav a.active { color: #1677ff; background: #e6f4ff; font-weight: 600; }
 </style>
 </head>
 <body>
+<nav class="side-nav" id="sideNav">
+  <button class="side-nav-toggle" id="navToggle" aria-label="切换导航">☰</button>
+  <div class="side-nav-links" id="navLinks">
+    <a href="#radar" data-section="radar">雷达图</a>
+    <a href="#features" data-section="features">功能丰富度</a>
+    <a href="#ease" data-section="ease">易用性</a>
+    <a href="#detail" data-section="detail">指标明细</a>
+    <a href="#charts" data-section="charts">维度对比</a>
+  </div>
+</nav>
 <div class="container">
   <h1>表格性能自动化测试报告</h1>
   <div class="meta" id="meta"></div>
@@ -151,14 +205,12 @@
       <div id="radar"></div>
     </div>
     <div class="radar-side">
-      <div class="radar-hint">每 2s 自动切换，鼠标悬浮左侧图例可暂停</div>
-      <div class="pause-badge" id="pauseBadge">⏸ 已暂停（移开鼠标恢复）</div>
       <div id="legend"></div>
       <div class="progress"><div class="progress-bar" id="progressBar"></div></div>
     </div>
   </div>
 
-  <h2>可用性对比</h2>
+  <h2 id="features">功能丰富度对比</h2>
   <div class="card">
     <div class="usability-stats" id="usabilityStats"></div>
     <div class="table-scroll">
@@ -169,12 +221,16 @@
       行高控制 = 是否原生支持设置行高（经 CSS 压缩实现计部分，如 surely-vue / naive-ui / tdesign / primevue）；
       横向虚拟列表 = 列级虚拟化，横向滚动只渲染可见列（整行渲染、仅容器横向滚动计不支持；库原生支持但当前版本缺陷未启用计部分支持，如 naive-ui 2.44.1 的 virtual-scroll-x 固定列错位）；
       宽度控制 = 容器宽度自适应铺满（element TableV2 需 ResizeObserver 动态控制计部分）；
-      滚动无白屏 = 内容跟随驱动下快速滚动全程不出现白屏。
+      列筛选 = 列头内置筛选器，无需手动实现；列排序 = 列头内置排序触发；
+      单元格编辑 = 内置行内编辑能力；导出 = 内置导出 CSV/Excel 能力；
+      树形/展开行 = 树形数据或行展开详细视图（仅展开行计部分，如 naive-ui / element-plus 等）；
+      合并单元格 = 内置单元格合并 API（rowspan/colspan）；表头分组 = 多级列头分组；
+      区域选择 = 鼠标拖拽或 Shift+click 选择多单元格区域。
       ✓ 支持　△ 部分　✕ 不支持。
     </div>
   </div>
 
-  <h2>易用性主观评分</h2>
+  <h2 id="ease">易用性主观评分</h2>
   <div class="card">
     <div class="usability-stats" id="easeStats"></div>
     <div class="table-scroll">
@@ -186,7 +242,7 @@
     </div>
   </div>
 
-  <h2>指标明细</h2>
+  <h2 id="detail">指标明细</h2>
   <div class="card table-scroll">
     <table id="dataTable"></table>
     <div class="note">
@@ -198,7 +254,7 @@
     </div>
   </div>
 
-  <h2>各维度对比</h2>
+  <h2 id="charts">各维度对比</h2>
   <div class="chart-grid" id="chartGrid"></div>
   <div class="note" style="margin-top:14px">条形图按优劣排序，最好的排最上面（★ 为该维度最优）。</div>
 </div>
@@ -225,7 +281,7 @@
   // ---------------- 雷达图 ----------------
   var DIMS = [
     { key: 'renderMs', name: '渲染速度', lower: true },
-    { key: 'pxPerSec', name: '无白屏速度', lower: false },
+    { key: 'usability.featureScore', name: '功能丰富度', lower: false },
     { key: 'avgFps', name: '平均FPS', lower: false },
     { key: 'lowFps1pct', name: '1%low FPS', lower: false },
     { key: 'droppedFrames', name: '掉帧控制', lower: true },
@@ -277,9 +333,10 @@
     },
     radar: {
       indicator: DIMS.map(function (d) { return { name: d.name, max: 100 }; }),
-      radius: '68%',
+      center: ['50%', '50%'],
+      radius: '60%',
       splitArea: { areaStyle: { opacity: 0.3 } },
-      axisName: { color: '#1f2329', fontSize: 15, fontWeight: 600 },
+      axisName: { color: '#1f2329', fontSize: 13, fontWeight: 600 },
     },
     series: [{ type: 'radar', data: [] }],
     animationDuration: 300,
@@ -305,12 +362,10 @@
     item.appendChild(label);
     item.addEventListener('mouseenter', function () {
       paused = true;
-      document.getElementById('pauseBadge').style.visibility = 'visible';
       showRadar(i);
     });
     item.addEventListener('mouseleave', function () {
       paused = false;
-      document.getElementById('pauseBadge').style.visibility = 'hidden';
     });
     item.addEventListener('click', function () { showRadar(i); });
     legendEl.appendChild(item);
@@ -360,14 +415,23 @@
     progressEl.style.background = colorOf(curIdx);
   }, 50);
   showRadar(0);
+  // 确保布局完成后重新调整雷达图尺寸
+  requestAnimationFrame(function () { radarChart.resize(); });
 
-  // ---------------- 可用性对比 ----------------
+  // ---------------- 功能丰富度对比 ----------------
   var FEATURES = [
     { key: 'fixed', name: '列固定' },
     { key: 'rowHeight', name: '行高控制' },
     { key: 'hVirtual', name: '横向虚拟列表' },
     { key: 'width', name: '宽度控制' },
-    { key: 'noBlank', name: '滚动无白屏' },
+    { key: 'filtering', name: '列筛选' },
+    { key: 'sorting', name: '列排序' },
+    { key: 'editing', name: '单元格编辑' },
+    { key: 'export', name: '导出' },
+    { key: 'treeExpand', name: '树形/展开行' },
+    { key: 'cellMerge', name: '合并单元格' },
+    { key: 'headerGroup', name: '表头分组' },
+    { key: 'rangeSelection', name: '区域选择' },
   ];
   function mark(v) {
     if (v === 1) return '<span class="mark-ok">✓ 支持</span>';
@@ -395,10 +459,12 @@
   }).join('');
   var fullOk = DATA.filter(function (d) {
     var u = d.usability || {};
-    return u.fixed === 1 && u.rowHeight === 1 && u.hVirtual === 1 && u.width === 1 && u.noBlank === 1;
+    return u.fixed === 1 && u.rowHeight === 1 && u.hVirtual === 1 && u.width === 1
+      && u.filtering === 1 && u.sorting === 1 && u.editing === 1 && u.export === 1
+      && u.treeExpand === 1 && u.cellMerge === 1 && u.headerGroup === 1 && u.rangeSelection === 1;
   }).length;
   statsHtml +=
-    '<div class="u-stat"><div class="u-name">五维全部达标</div>' +
+    '<div class="u-stat"><div class="u-name">十二维全部达标</div>' +
     '<div class="u-num"><span class="u-total">' + fullOk + '/' + DATA.length + '</span></div></div>';
   document.getElementById('usabilityStats').innerHTML = statsHtml;
 
@@ -417,7 +483,7 @@
       return (
         '<tr><td>' + r.name + '</td>' +
         FEATURES.map(function (f) { return '<td>' + mark(r.u[f.key]) + '</td>'; }).join('') +
-        '<td class="u-score">' + r.score + '/5</td></tr>'
+        '<td class="u-score">' + r.score + '/12</td></tr>'
       );
     })
     .join('');
@@ -574,6 +640,62 @@
     window.addEventListener('resize', function () { chart.resize(); });
   });
   window.addEventListener('resize', function () { radarChart.resize(); });
+
+  // ---------------- 右侧导航：滚动高亮 + 平滑跳转 ----------------
+  var navLinks = document.querySelectorAll('#sideNav a');
+  function updateNav() {
+    var scrollY = window.scrollY + 120;
+    var activeId = 'radar';
+    navLinks.forEach(function (a) {
+      var el = document.getElementById(a.getAttribute('data-section'));
+      if (el && el.offsetTop <= scrollY) activeId = a.getAttribute('data-section');
+    });
+    navLinks.forEach(function (a) {
+      a.classList.toggle('active', a.getAttribute('data-section') === activeId);
+    });
+  }
+  window.addEventListener('scroll', updateNav);
+  updateNav();
+  // ---------------- 右侧导航：不滚动自动收起 ----------------
+  var navLinksEl = document.getElementById('navLinks');
+  var collapseTimer = null;
+  var COLLAPSE_DELAY = 2000; // 停止滚动 2s 后自动收起
+
+  function collapseNav() { navLinksEl.classList.add('collapsed'); }
+  function expandNav() {
+    navLinksEl.classList.remove('collapsed');
+    clearTimeout(collapseTimer);
+  }
+  function resetCollapseTimer() {
+    expandNav();
+    clearTimeout(collapseTimer);
+    collapseTimer = setTimeout(collapseNav, COLLAPSE_DELAY);
+  }
+
+  // 滚动时展开并重置计时器
+  window.addEventListener('scroll', resetCollapseTimer, { passive: true });
+  // 鼠标悬停导航区时保持展开
+  document.getElementById('sideNav').addEventListener('mouseenter', expandNav);
+  document.getElementById('sideNav').addEventListener('mouseleave', function () {
+    clearTimeout(collapseTimer);
+    collapseTimer = setTimeout(collapseNav, COLLAPSE_DELAY);
+  });
+  // 点击 ☰ 按钮手动切换
+  document.getElementById('navToggle').addEventListener('click', function () {
+    navLinksEl.classList.toggle('collapsed');
+    clearTimeout(collapseTimer);
+  });
+  // 点击链接后收起
+  navLinks.forEach(function (a) {
+    a.addEventListener('click', function (e) {
+      e.preventDefault();
+      var el = document.getElementById(a.getAttribute('data-section'));
+      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      collapseNav();
+    });
+  });
+  // 启动自动收起计时器
+  collapseTimer = setTimeout(collapseNav, COLLAPSE_DELAY);
 </script>
 </body>
 </html>

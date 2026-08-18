@@ -50,35 +50,51 @@ const PACKAGE_OF = {
   'simple-table': '@simple-table/vue',
 };
 
-// 可用性特性配置（取值 1=支持，0.5=部分支持，0=不支持）：
+// 功能丰富度特性配置（取值 1=支持，0.5=部分支持，0=不支持）：
 //   fixed     = 左右固定列
 //   rowHeight = 行高控制（原生支持；需 CSS 压缩实现计 0.5）
 //   hVirtual  = 横向虚拟列表（列级虚拟化，只渲染可见列；整行渲染仅容器横向滚动计 0；
 //               库原生支持但当前版本缺陷未启用计 0.5，如 naive-ui 2.44.1 virtual-scroll-x 固定列错位）
 //   width     = 宽度控制（容器宽度自适应铺满；需外部 ResizeObserver 等 JS 动态控制计 0.5）
-// 依据：各组件模板顶部 ul > li 标注及组件实际配置（virtual-x / fixed / rowHeight 等）
+//   filtering = 列筛选（内置列头筛选器，无需手动实现）
+//   sorting   = 列排序（内置列头排序，支持多列排序计 0.5→1）
+//   editing   = 单元格编辑（内置行内编辑能力）
+//   export    = 导出（内置导出 CSV/Excel 能力）
+//   treeExpand = 树形/展开行（树形数据或行展开详细视图；仅展开行无树形计 0.5）
+//   cellMerge = 合并单元格（内置单元格合并 API，rowspan/colspan）
+//   headerGroup = 表头分组（多级列头分组）
+//   rangeSelection = 区域选择（鼠标拖拽或 Shift+click 选择多单元格区域）
+// 依据：各组件官方文档及实际 API 支持度
 const USABILITY = {
-  'stk-table-vue': { fixed: 1, rowHeight: 1, hVirtual: 1, width: 1, noBlank: 1 },
-  'vxe-table': { fixed: 1, rowHeight: 1, hVirtual: 1, width: 1, noBlank: 1 },
-  'naive-ui': { fixed: 1, rowHeight: 0.5, hVirtual: 0.5, width: 1, noBlank: 1 },
-  'element-plus': { fixed: 1, rowHeight: 1, hVirtual: 0, width: 0.5, noBlank: 1 },
-  'arco-design': { fixed: 0, rowHeight: 0, hVirtual: 0, width: 1, noBlank: 0 },
-  tdesign: { fixed: 0.5, rowHeight: 0.5, hVirtual: 0, width: 1, noBlank: 0 },
+  'stk-table-vue': { fixed: 1, rowHeight: 1, hVirtual: 1, width: 1, filtering: 1, sorting: 1, editing: 1, export: 1, treeExpand: 1, cellMerge: 1, headerGroup: 1, rangeSelection: 1, noBlank: 1 },
+  'vxe-table': { fixed: 1, rowHeight: 1, hVirtual: 1, width: 1, filtering: 1, sorting: 1, editing: 1, export: 1, treeExpand: 1, cellMerge: 1, headerGroup: 1, rangeSelection: 1, noBlank: 1 },
+  'naive-ui': { fixed: 1, rowHeight: 0.5, hVirtual: 0.5, width: 1, filtering: 1, sorting: 1, editing: 0.5, export: 0, treeExpand: 0.5, cellMerge: 0, headerGroup: 1, rangeSelection: 0, noBlank: 1 },
+  'element-plus': { fixed: 1, rowHeight: 1, hVirtual: 0, width: 0.5, filtering: 1, sorting: 1, editing: 0.5, export: 0, treeExpand: 0.5, cellMerge: 0.5, headerGroup: 1, rangeSelection: 0, noBlank: 1 },
+  'arco-design': { fixed: 0, rowHeight: 0, hVirtual: 0, width: 1, filtering: 1, sorting: 1, editing: 0, export: 0, treeExpand: 0.5, cellMerge: 0, headerGroup: 1, rangeSelection: 0, noBlank: 0 },
+  tdesign: { fixed: 0.5, rowHeight: 0.5, hVirtual: 0, width: 1, filtering: 1, sorting: 1, editing: 1, export: 0, treeExpand: 0.5, cellMerge: 0.5, headerGroup: 1, rangeSelection: 0.5, noBlank: 0 },
   'ant-design-vue(surely-vue)': {
     fixed: 1,
     rowHeight: 0.5,
     hVirtual: 0.5,
     width: 1,
+    filtering: 1,
+    sorting: 1,
+    editing: 0,
+    export: 0,
+    treeExpand: 0.5,
+    cellMerge: 0,
+    headerGroup: 1,
+    rangeSelection: 0,
     noBlank: 1,
   },
-  vuetify: { fixed: 0, rowHeight: 1, hVirtual: 0, width: 1, noBlank: 0 },
-  primevue: { fixed: 1, rowHeight: 0.5, hVirtual: 0, width: 1, noBlank: 0 },
-  'v-table': { fixed: 1, rowHeight: 1, hVirtual: 1, width: 1, noBlank: 1 },
-  'ag-grid': { fixed: 1, rowHeight: 1, hVirtual: 1, width: 1, noBlank: 1 },
-  'tanstack-virtual': { fixed: 0, rowHeight: 1, hVirtual: 0, width: 1, noBlank: 0 },
-  revogrid: { fixed: 1, rowHeight: 1, hVirtual: 1, width: 1, noBlank: 1 },
-  'canvas-vue-table': { fixed: 1, rowHeight: 0, hVirtual: 0, width: 1, noBlank: 1 },
-  'simple-table': { fixed: 1, rowHeight: 1, hVirtual: 1, width: 1, noBlank: 0 },
+  vuetify: { fixed: 0, rowHeight: 1, hVirtual: 0, width: 1, filtering: 1, sorting: 1, editing: 0.5, export: 0, treeExpand: 0.5, cellMerge: 0, headerGroup: 0, rangeSelection: 0, noBlank: 0 },
+  primevue: { fixed: 1, rowHeight: 0.5, hVirtual: 0, width: 1, filtering: 1, sorting: 1, editing: 1, export: 1, treeExpand: 0.5, cellMerge: 0.5, headerGroup: 0.5, rangeSelection: 0.5, noBlank: 0 },
+  'v-table': { fixed: 1, rowHeight: 1, hVirtual: 1, width: 1, filtering: 1, sorting: 1, editing: 1, export: 1, treeExpand: 1, cellMerge: 1, headerGroup: 1, rangeSelection: 1, noBlank: 1 },
+  'ag-grid': { fixed: 1, rowHeight: 1, hVirtual: 1, width: 1, filtering: 1, sorting: 1, editing: 1, export: 1, treeExpand: 1, cellMerge: 1, headerGroup: 1, rangeSelection: 1, noBlank: 1 },
+  'tanstack-virtual': { fixed: 0, rowHeight: 1, hVirtual: 0, width: 1, filtering: 0, sorting: 0, editing: 0, export: 0, treeExpand: 0, cellMerge: 0, headerGroup: 0, rangeSelection: 0, noBlank: 0 },
+  revogrid: { fixed: 1, rowHeight: 1, hVirtual: 1, width: 1, filtering: 0, sorting: 0, editing: 1, export: 0, treeExpand: 0, cellMerge: 0.5, headerGroup: 0, rangeSelection: 0.5, noBlank: 1 },
+  'canvas-vue-table': { fixed: 1, rowHeight: 0, hVirtual: 0, width: 1, filtering: 0, sorting: 0, editing: 0, export: 0, treeExpand: 0, cellMerge: 0, headerGroup: 0, rangeSelection: 0, noBlank: 1 },
+  'simple-table': { fixed: 1, rowHeight: 1, hVirtual: 1, width: 1, filtering: 1, sorting: 1, editing: 1, export: 1, treeExpand: 1, cellMerge: 1, headerGroup: 1, rangeSelection: 0, noBlank: 0 },
   // 注：vue-virtual-scroller / virtua / vueuc(VirtualList) 为通用虚拟列表，不属于表格组件，
   // 已从应用移除、不参与测试与排名（代码保留于 src/vue/ 下）
 };
@@ -648,13 +664,21 @@ async function main() {
 
     const sum = arr => Math.round(arr.reduce((a, b) => a + b, 0));
     const usability = USABILITY[label] || {
-      fixed: 0,
-      rowHeight: 0,
-      hVirtual: 0,
-    };
-    usability.noBlank = usability.noBlank !== undefined
-      ? usability.noBlank
-      : (roundBlanks.length === 0 ? 1 : 0);
+  fixed: 0,
+  rowHeight: 0,
+  hVirtual: 0,
+  width: 0,
+  filtering: 0,
+  sorting: 0,
+  editing: 0,
+  export: 0,
+};
+usability.noBlank = usability.noBlank !== undefined
+  ? usability.noBlank
+  : (roundBlanks.length === 0 ? 1 : 0);
+// 计算功能丰富度总分（12 个维度，满分 12 分）
+const FEATURE_KEYS = ['fixed', 'rowHeight', 'hVirtual', 'width', 'filtering', 'sorting', 'editing', 'export', 'treeExpand', 'cellMerge', 'headerGroup', 'rangeSelection'];
+usability.featureScore = FEATURE_KEYS.reduce((s, k) => s + (Number(usability[k]) || 0), 0);
     results.push({
       table: label,
       renderType: RENDER_TYPE[label] || 'Vue DOM',
@@ -706,28 +730,32 @@ async function main() {
       掉帧数: r.droppedFrames,
       '滚动长任务(ms)': r.scrollLongTaskMs,
       '堆增量(MB)': r.heapDeltaMB,
-      '可用性(x/4)':
-        r.usability.fixed +
-        r.usability.rowHeight +
-        r.usability.hVirtual +
-        r.usability.width +
-        '/4',
+      '功能丰富度(x/12)':
+        r.usability.featureScore + '/12',
       '易用性(x/5)': (r.easeOfUse && r.easeOfUse.score) || '-',
     })),
   );
 
-  // 可用性统计：各特性支持（含部分）的组件数量
-  const USABILITY_DIMS = [
+  // 功能丰富度统计：各特性支持（含部分）的组件数量
+  const FEATURE_DIMS = [
     ['fixed', '列固定'],
     ['rowHeight', '行高控制'],
     ['hVirtual', '横向虚拟列表'],
     ['width', '宽度控制'],
+    ['filtering', '列筛选'],
+    ['sorting', '列排序'],
+    ['editing', '单元格编辑'],
+    ['export', '导出'],
+    ['treeExpand', '树形/展开行'],
+    ['cellMerge', '合并单元格'],
+    ['headerGroup', '表头分组'],
+    ['rangeSelection', '区域选择'],
   ];
-  for (const [key, name] of USABILITY_DIMS) {
+  for (const [key, name] of FEATURE_DIMS) {
     const ok = results.filter(r => r.usability[key] === 1).length;
     const part = results.filter(r => r.usability[key] === 0.5).length;
     console.log(
-      `  可用性·${name}: 支持 ${ok}/${results.length}，部分 ${part}/${results.length}`,
+      `  功能丰富度·${name}: 支持 ${ok}/${results.length}，部分 ${part}/${results.length}`,
     );
   }
   const easeAvg = (

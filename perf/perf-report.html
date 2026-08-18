@@ -13,7 +13,7 @@
     background: #f5f6fa;
     color: #333;
   }
-  .container { max-width: 1200px; margin: 0 auto; padding: 20px 16px 60px; }
+  .container { max-width: 1200px; margin: 0 auto; padding: 20px 24px 60px; }
   h1 { font-size: 24px; margin: 8px 0 4px; }
   h2 { font-size: 17px; margin: 28px 0 12px; border-left: 4px solid #5b8ff9; padding-left: 8px; }
   .meta { color: #888; font-size: 13px; line-height: 1.8; }
@@ -40,10 +40,10 @@
     box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
   }
   /* ---- 雷达图区 ---- */
-  .radar-wrap { display: flex; gap: 16px; align-items: flex-start; flex-wrap: wrap; }
+  .radar-wrap { display: flex; gap: 16px; align-items: flex-start; }
   .radar-main { flex: 1; min-width: 420px; }
   #radar { width: 100%; height: 440px; }
-  .radar-side { width: 260px; display: flex; flex-direction: column; }
+  .radar-side { width: 230px; flex: none; display: flex; flex-direction: column;}
   .radar-current {
     font-size: 28px;
     font-weight: bold;
@@ -54,19 +54,7 @@
     justify-content: center;
     height: 32px;
   }
-  .radar-hint { font-size: 12px; color: #aaa; margin-bottom: 12px; }
-  .pause-badge {
-    visibility: hidden;
-    font-size: 12px;
-    color: #d46b08;
-    background: #fff7e6;
-    border: 1px solid #ffd591;
-    border-radius: 4px;
-    padding: 2px 8px;
-    margin-bottom: 10px;
-    width: fit-content;
-  }
-  #legend { display: flex; flex-direction: column; gap: 6px; overflow-y: auto; }
+  #legend { display: flex; flex-direction: column; overflow-y: auto }
   .legend-item {
     display: flex;
     align-items: center;
@@ -130,9 +118,75 @@
   }
   .chart-box { height: 360px; }
   .note { font-size: 12px; color: #999; line-height: 1.9; margin-top: 10px; }
+  /* ---- 右侧导航 ---- */
+  .side-nav {
+    position: fixed;
+    right: 12px;
+    bottom: 20px;
+    z-index: 100;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    background: rgba(255,255,255,0.92);
+    border: 1px solid #e8e8e8;
+    border-radius: 8px;
+    padding: 8px 6px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+  }
+  .side-nav-toggle {
+    display: block;
+    border: none;
+    background: none;
+    font-size: 20px;
+    line-height: 1;
+    cursor: pointer;
+    color: #555;
+    padding: 4px 10px;
+    border-radius: 4px;
+    width: 100%;
+    text-align: center;
+    transition: background 0.2s;
+  }
+  .side-nav-toggle:hover { background: #f0f5ff; }
+  .side-nav-links {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    overflow: hidden;
+    transition: max-height 0.35s ease, opacity 0.3s ease;
+    max-height: 300px;
+    opacity: 1;
+  }
+  .side-nav-links.collapsed {
+    max-height: 0;
+    opacity: 0;
+  }
+  .side-nav a {
+    display: block;
+    font-size: 12px;
+    color: #888;
+    text-decoration: none;
+    padding: 5px 10px;
+    border-radius: 4px;
+    white-space: nowrap;
+    transition: all 0.2s;
+    cursor: pointer;
+  }
+  .side-nav a:hover { color: #1677ff; background: #f0f5ff; }
+  .side-nav a.active { color: #1677ff; background: #e6f4ff; font-weight: 600; }
 </style>
 </head>
 <body>
+<nav class="side-nav" id="sideNav">
+  <button class="side-nav-toggle" id="navToggle" aria-label="切换导航">☰</button>
+  <div class="side-nav-links" id="navLinks">
+    <a href="#radar" data-section="radar">雷达图</a>
+    <a href="#features" data-section="features">功能丰富度</a>
+    <a href="#ease" data-section="ease">易用性</a>
+    <a href="#detail" data-section="detail">指标明细</a>
+    <a href="#charts" data-section="charts">维度对比</a>
+  </div>
+</nav>
 <div class="container">
   <h1>表格性能自动化测试报告</h1>
   <div class="meta" id="meta"></div>
@@ -151,14 +205,12 @@
       <div id="radar"></div>
     </div>
     <div class="radar-side">
-      <div class="radar-hint">每 2s 自动切换，鼠标悬浮左侧图例可暂停</div>
-      <div class="pause-badge" id="pauseBadge">⏸ 已暂停（移开鼠标恢复）</div>
       <div id="legend"></div>
       <div class="progress"><div class="progress-bar" id="progressBar"></div></div>
     </div>
   </div>
 
-  <h2>可用性对比</h2>
+  <h2 id="features">功能丰富度对比</h2>
   <div class="card">
     <div class="usability-stats" id="usabilityStats"></div>
     <div class="table-scroll">
@@ -169,12 +221,16 @@
       行高控制 = 是否原生支持设置行高（经 CSS 压缩实现计部分，如 surely-vue / naive-ui / tdesign / primevue）；
       横向虚拟列表 = 列级虚拟化，横向滚动只渲染可见列（整行渲染、仅容器横向滚动计不支持；库原生支持但当前版本缺陷未启用计部分支持，如 naive-ui 2.44.1 的 virtual-scroll-x 固定列错位）；
       宽度控制 = 容器宽度自适应铺满（element TableV2 需 ResizeObserver 动态控制计部分）；
-      滚动无白屏 = 内容跟随驱动下快速滚动全程不出现白屏。
+      列筛选 = 列头内置筛选器，无需手动实现；列排序 = 列头内置排序触发；
+      单元格编辑 = 内置行内编辑能力；导出 = 内置导出 CSV/Excel 能力；
+      树形/展开行 = 树形数据或行展开详细视图（仅展开行计部分，如 naive-ui / element-plus 等）；
+      合并单元格 = 内置单元格合并 API（rowspan/colspan）；表头分组 = 多级列头分组；
+      区域选择 = 鼠标拖拽或 Shift+click 选择多单元格区域。
       ✓ 支持　△ 部分　✕ 不支持。
     </div>
   </div>
 
-  <h2>易用性主观评分</h2>
+  <h2 id="ease">易用性主观评分</h2>
   <div class="card">
     <div class="usability-stats" id="easeStats"></div>
     <div class="table-scroll">
@@ -186,7 +242,7 @@
     </div>
   </div>
 
-  <h2>指标明细</h2>
+  <h2 id="detail">指标明细</h2>
   <div class="card table-scroll">
     <table id="dataTable"></table>
     <div class="note">
@@ -198,16 +254,16 @@
     </div>
   </div>
 
-  <h2>各维度对比</h2>
+  <h2 id="charts">各维度对比</h2>
   <div class="chart-grid" id="chartGrid"></div>
   <div class="note" style="margin-top:14px">条形图按优劣排序，最好的排最上面（★ 为该维度最优）。</div>
 </div>
 
 <script>
   /* global echarts */
-  // [{"table":"stk-table-vue","renderType":"Vue DOM","version":"1.1.0","renderMs":322,"firstPaintMs":0,"domNodes":851,"renderLongTaskMs":0,"scrollMethod":"wheel+scroll+drag","scrolledPx":230709,"pxPerSec":63258,"blankPct":"-","avgFps":51.8,"lowFps1pct":15,"p99FrameMs":66.7,"worstFrameMs":66.7,"droppedFrames":9,"scrollLongTaskMs":149,"heapDeltaMB":-52,"timeout":false,"usability":{"fixed":1,"rowHeight":1,"hVirtual":1,"width":1,"noBlank":1},"easeOfUse":{"score":4.5,"note":"配置简洁、API 直观，文档完善，开箱即用"}},{"table":"vxe-table","renderType":"Vue DOM","version":"4.20.12","renderMs":929,"firstPaintMs":0,"domNodes":2837,"renderLongTaskMs":548,"scrollMethod":"wheel+scroll+drag","scrolledPx":198499,"pxPerSec":48483,"blankPct":"-","avgFps":31,"lowFps1pct":1.9,"p99FrameMs":566.6,"worstFrameMs":566.6,"droppedFrames":36,"scrollLongTaskMs":1708,"heapDeltaMB":33.9,"timeout":false,"usability":{"fixed":1,"rowHeight":1,"hVirtual":1,"width":1,"noBlank":1},"easeOfUse":{"score":3,"note":"功能全面但配置项繁多，文档庞大，学习成本高"}},{"table":"naive-ui","renderType":"Vue DOM","version":"2.44.1","renderMs":385,"firstPaintMs":0,"domNodes":1221,"renderLongTaskMs":52,"scrollMethod":"wheel+scroll+drag","scrolledPx":215389,"pxPerSec":55927,"blankPct":"-","avgFps":32.2,"lowFps1pct":5.5,"p99FrameMs":216.7,"worstFrameMs":216.7,"droppedFrames":40,"scrollLongTaskMs":1418,"heapDeltaMB":78.3,"timeout":false,"usability":{"fixed":1,"rowHeight":0.5,"hVirtual":0.5,"width":1,"noBlank":1},"easeOfUse":{"score":4.5,"note":"类型提示完善、文档清晰，虚拟表格开箱即用"}},{"table":"element-plus","renderType":"Vue DOM","version":"2.14.4","renderMs":357,"firstPaintMs":68,"domNodes":2053,"renderLongTaskMs":60,"scrollMethod":"wheel+scroll+drag","scrolledPx":197248,"pxPerSec":41510,"blankPct":"-","avgFps":16.8,"lowFps1pct":8.6,"p99FrameMs":116.6,"worstFrameMs":116.6,"droppedFrames":62,"scrollLongTaskMs":6267,"heapDeltaMB":-47.4,"timeout":false,"usability":{"fixed":1,"rowHeight":1,"hVirtual":0,"width":0.5,"noBlank":1},"easeOfUse":{"score":4,"note":"中文文档完善、生态成熟，TableV2 部分能力需自行封装"}},{"table":"arco-design","renderType":"Vue DOM","version":"2.58.0","renderMs":511,"firstPaintMs":0,"domNodes":3825,"renderLongTaskMs":227,"scrollMethod":"wheel+scroll+drag","scrolledPx":118187,"pxPerSec":15783,"blankPct":"-","avgFps":17.3,"lowFps1pct":3.3,"p99FrameMs":350,"worstFrameMs":350,"droppedFrames":23,"scrollLongTaskMs":10690,"heapDeltaMB":29.7,"timeout":false,"usability":{"fixed":0,"rowHeight":0,"hVirtual":0,"width":1,"noBlank":0},"easeOfUse":{"score":3.5,"note":"API 简洁、文档清晰，但大数据场景能力薄弱"}},{"table":"tdesign","renderType":"Vue DOM","version":"1.20.6","renderMs":637,"firstPaintMs":55,"domNodes":1591,"renderLongTaskMs":167,"scrollMethod":"wheel+scroll+drag","scrolledPx":208142,"pxPerSec":50280,"blankPct":"-","avgFps":47.3,"lowFps1pct":15,"p99FrameMs":116.7,"worstFrameMs":116.7,"droppedFrames":19,"scrollLongTaskMs":2366,"heapDeltaMB":-41.1,"timeout":false,"usability":{"fixed":0.5,"rowHeight":0.5,"hVirtual":0,"width":1,"noBlank":0},"easeOfUse":{"score":3,"note":"上手简单但文档细节一般，虚拟滚动配置需自行探索"}},{"table":"ant-design-vue(surely-vue)","renderType":"Vue DOM","version":"5.1.6","renderMs":434,"firstPaintMs":0,"domNodes":1281,"renderLongTaskMs":169,"scrollMethod":"wheel+scroll+drag","scrolledPx":196857,"pxPerSec":52561,"blankPct":"-","avgFps":51.2,"lowFps1pct":20,"p99FrameMs":83.4,"worstFrameMs":83.4,"droppedFrames":11,"scrollLongTaskMs":95,"heapDeltaMB":42.6,"timeout":false,"usability":{"fixed":1,"rowHeight":0.5,"hVirtual":0.5,"width":1,"noBlank":1},"easeOfUse":{"score":3,"note":"继承 antd 配置体系，文档较少，hVirtual 启用需摸索"}},{"table":"vuetify","renderType":"Vue DOM","version":"3.13.1","renderMs":728,"firstPaintMs":0,"domNodes":1094,"renderLongTaskMs":430,"scrollMethod":"wheel+scroll+drag","scrolledPx":193953,"pxPerSec":47437,"blankPct":"-","avgFps":35.8,"lowFps1pct":10,"p99FrameMs":116.7,"worstFrameMs":116.7,"droppedFrames":41,"scrollLongTaskMs":1727,"heapDeltaMB":-47.8,"timeout":false,"usability":{"fixed":0,"rowHeight":1,"hVirtual":0,"width":1,"noBlank":0},"easeOfUse":{"score":3.5,"note":"文档完善、风格规范统一，虚拟表格 API 版本间变动大"}},{"table":"primevue","renderType":"Vue DOM","version":"4.5.5","renderMs":945,"firstPaintMs":0,"domNodes":1459,"renderLongTaskMs":621,"scrollMethod":"wheel+scroll+drag","scrolledPx":177561,"pxPerSec":22970,"blankPct":"-","avgFps":16.8,"lowFps1pct":3.2,"p99FrameMs":366.7,"worstFrameMs":366.7,"droppedFrames":24,"scrollLongTaskMs":11134,"heapDeltaMB":215.9,"timeout":false,"usability":{"fixed":1,"rowHeight":0.5,"hVirtual":0,"width":1,"noBlank":0},"easeOfUse":{"score":3,"note":"文档丰富但 v4 主题体系需额外配置，上手易踩坑"}},{"table":"v-table","renderType":"Canvas","version":"1.26.6","renderMs":493,"firstPaintMs":63,"domNodes":25,"renderLongTaskMs":181,"scrollMethod":"wheel","scrolledPx":0,"pxPerSec":"-","blankPct":"-","avgFps":28.3,"lowFps1pct":20,"p99FrameMs":66.6,"worstFrameMs":66.6,"droppedFrames":15,"scrollLongTaskMs":61,"heapDeltaMB":-228.6,"timeout":false,"usability":{"fixed":1,"rowHeight":1,"hVirtual":1,"width":1,"noBlank":1},"easeOfUse":{"score":3,"note":"canvas 渲染模型特殊，配置模型学习成本较高"}},{"table":"ag-grid","renderType":"JS DOM","version":"36.1.0","renderMs":491,"firstPaintMs":0,"domNodes":2072,"renderLongTaskMs":192,"scrollMethod":"wheel+scroll+drag","scrolledPx":190753,"pxPerSec":46355,"blankPct":"-","avgFps":34,"lowFps1pct":10,"p99FrameMs":116.6,"worstFrameMs":116.6,"droppedFrames":31,"scrollLongTaskMs":3583,"heapDeltaMB":52.4,"timeout":false,"usability":{"fixed":1,"rowHeight":1,"hVirtual":1,"width":1,"noBlank":1},"easeOfUse":{"score":3.5,"note":"文档与示例完善、功能强大，但概念较多且社区版有功能限制"}},{"table":"tanstack-virtual","renderType":"JS DOM","version":"3.13.35","renderMs":315,"firstPaintMs":0,"domNodes":1376,"renderLongTaskMs":0,"scrollMethod":"wheel+scroll+drag","scrolledPx":202447,"pxPerSec":56463,"blankPct":"-","avgFps":52.9,"lowFps1pct":20,"p99FrameMs":50.1,"worstFrameMs":50.1,"droppedFrames":9,"scrollLongTaskMs":61,"heapDeltaMB":-42.8,"timeout":false,"usability":{"fixed":0,"rowHeight":1,"hVirtual":0,"width":1,"noBlank":0},"easeOfUse":{"score":3,"note":"headless API 简洁，但 UI、固定列、表头全需手写"}},{"table":"revogrid","renderType":"Web Component","version":"4.26.0","renderMs":398,"firstPaintMs":51,"domNodes":593,"renderLongTaskMs":0,"scrollMethod":"wheel+scroll+drag","scrolledPx":209261,"pxPerSec":58526,"blankPct":"-","avgFps":60,"lowFps1pct":58.1,"p99FrameMs":17.2,"worstFrameMs":17.3,"droppedFrames":0,"scrollLongTaskMs":0,"heapDeltaMB":39.3,"timeout":false,"usability":{"fixed":1,"rowHeight":1,"hVirtual":1,"width":1,"noBlank":1},"easeOfUse":{"score":3.5,"note":"Web Component 零配置即可用、性能强悍，但 Vue 集成需 loader 注册，文档偏底层"}},{"table":"canvas-vue-table","renderType":"Canvas","version":"0.0.6","renderMs":284,"firstPaintMs":51,"domNodes":26,"renderLongTaskMs":0,"scrollMethod":"wheel+scroll+drag","scrolledPx":206501,"pxPerSec":57870,"blankPct":"-","avgFps":60,"lowFps1pct":58.1,"p99FrameMs":17.2,"worstFrameMs":17.2,"droppedFrames":0,"scrollLongTaskMs":0,"heapDeltaMB":-38.8,"timeout":false,"usability":{"fixed":1,"rowHeight":0,"hVirtual":0,"width":1,"noBlank":1},"easeOfUse":{"score":2.5,"note":"API 简洁，但生态极小、文档少；行高硬编码最小39px无法压至28px，横向非逐列虚拟化"}},{"table":"simple-table","renderType":"Vue DOM","version":"4.1.6","renderMs":1118,"firstPaintMs":0,"domNodes":1962,"renderLongTaskMs":785,"scrollMethod":"wheel+scroll+drag","scrolledPx":195243,"pxPerSec":47726,"blankPct":"-","avgFps":32.2,"lowFps1pct":4.6,"p99FrameMs":250,"worstFrameMs":250,"droppedFrames":33,"scrollLongTaskMs":3922,"heapDeltaMB":-5.1,"timeout":false,"usability":{"fixed":1,"rowHeight":1,"hVirtual":1,"width":1,"noBlank":0},"easeOfUse":{"score":3.5,"note":"API 现代、双虚拟开箱即用，但 Community 授权非开源可商用，需付费"}}] / {"time":"2026/8/18 12:22:57","scrollDuration":5000} 为占位符，由 run-perf.mjs 生成报告时替换为真实数据
-  var DATA = [{"table":"stk-table-vue","renderType":"Vue DOM","version":"1.1.0","renderMs":322,"firstPaintMs":0,"domNodes":851,"renderLongTaskMs":0,"scrollMethod":"wheel+scroll+drag","scrolledPx":230709,"pxPerSec":63258,"blankPct":"-","avgFps":51.8,"lowFps1pct":15,"p99FrameMs":66.7,"worstFrameMs":66.7,"droppedFrames":9,"scrollLongTaskMs":149,"heapDeltaMB":-52,"timeout":false,"usability":{"fixed":1,"rowHeight":1,"hVirtual":1,"width":1,"noBlank":1},"easeOfUse":{"score":4.5,"note":"配置简洁、API 直观，文档完善，开箱即用"}},{"table":"vxe-table","renderType":"Vue DOM","version":"4.20.12","renderMs":929,"firstPaintMs":0,"domNodes":2837,"renderLongTaskMs":548,"scrollMethod":"wheel+scroll+drag","scrolledPx":198499,"pxPerSec":48483,"blankPct":"-","avgFps":31,"lowFps1pct":1.9,"p99FrameMs":566.6,"worstFrameMs":566.6,"droppedFrames":36,"scrollLongTaskMs":1708,"heapDeltaMB":33.9,"timeout":false,"usability":{"fixed":1,"rowHeight":1,"hVirtual":1,"width":1,"noBlank":1},"easeOfUse":{"score":3,"note":"功能全面但配置项繁多，文档庞大，学习成本高"}},{"table":"naive-ui","renderType":"Vue DOM","version":"2.44.1","renderMs":385,"firstPaintMs":0,"domNodes":1221,"renderLongTaskMs":52,"scrollMethod":"wheel+scroll+drag","scrolledPx":215389,"pxPerSec":55927,"blankPct":"-","avgFps":32.2,"lowFps1pct":5.5,"p99FrameMs":216.7,"worstFrameMs":216.7,"droppedFrames":40,"scrollLongTaskMs":1418,"heapDeltaMB":78.3,"timeout":false,"usability":{"fixed":1,"rowHeight":0.5,"hVirtual":0.5,"width":1,"noBlank":1},"easeOfUse":{"score":4.5,"note":"类型提示完善、文档清晰，虚拟表格开箱即用"}},{"table":"element-plus","renderType":"Vue DOM","version":"2.14.4","renderMs":357,"firstPaintMs":68,"domNodes":2053,"renderLongTaskMs":60,"scrollMethod":"wheel+scroll+drag","scrolledPx":197248,"pxPerSec":41510,"blankPct":"-","avgFps":16.8,"lowFps1pct":8.6,"p99FrameMs":116.6,"worstFrameMs":116.6,"droppedFrames":62,"scrollLongTaskMs":6267,"heapDeltaMB":-47.4,"timeout":false,"usability":{"fixed":1,"rowHeight":1,"hVirtual":0,"width":0.5,"noBlank":1},"easeOfUse":{"score":4,"note":"中文文档完善、生态成熟，TableV2 部分能力需自行封装"}},{"table":"arco-design","renderType":"Vue DOM","version":"2.58.0","renderMs":511,"firstPaintMs":0,"domNodes":3825,"renderLongTaskMs":227,"scrollMethod":"wheel+scroll+drag","scrolledPx":118187,"pxPerSec":15783,"blankPct":"-","avgFps":17.3,"lowFps1pct":3.3,"p99FrameMs":350,"worstFrameMs":350,"droppedFrames":23,"scrollLongTaskMs":10690,"heapDeltaMB":29.7,"timeout":false,"usability":{"fixed":0,"rowHeight":0,"hVirtual":0,"width":1,"noBlank":0},"easeOfUse":{"score":3.5,"note":"API 简洁、文档清晰，但大数据场景能力薄弱"}},{"table":"tdesign","renderType":"Vue DOM","version":"1.20.6","renderMs":637,"firstPaintMs":55,"domNodes":1591,"renderLongTaskMs":167,"scrollMethod":"wheel+scroll+drag","scrolledPx":208142,"pxPerSec":50280,"blankPct":"-","avgFps":47.3,"lowFps1pct":15,"p99FrameMs":116.7,"worstFrameMs":116.7,"droppedFrames":19,"scrollLongTaskMs":2366,"heapDeltaMB":-41.1,"timeout":false,"usability":{"fixed":0.5,"rowHeight":0.5,"hVirtual":0,"width":1,"noBlank":0},"easeOfUse":{"score":3,"note":"上手简单但文档细节一般，虚拟滚动配置需自行探索"}},{"table":"ant-design-vue(surely-vue)","renderType":"Vue DOM","version":"5.1.6","renderMs":434,"firstPaintMs":0,"domNodes":1281,"renderLongTaskMs":169,"scrollMethod":"wheel+scroll+drag","scrolledPx":196857,"pxPerSec":52561,"blankPct":"-","avgFps":51.2,"lowFps1pct":20,"p99FrameMs":83.4,"worstFrameMs":83.4,"droppedFrames":11,"scrollLongTaskMs":95,"heapDeltaMB":42.6,"timeout":false,"usability":{"fixed":1,"rowHeight":0.5,"hVirtual":0.5,"width":1,"noBlank":1},"easeOfUse":{"score":3,"note":"继承 antd 配置体系，文档较少，hVirtual 启用需摸索"}},{"table":"vuetify","renderType":"Vue DOM","version":"3.13.1","renderMs":728,"firstPaintMs":0,"domNodes":1094,"renderLongTaskMs":430,"scrollMethod":"wheel+scroll+drag","scrolledPx":193953,"pxPerSec":47437,"blankPct":"-","avgFps":35.8,"lowFps1pct":10,"p99FrameMs":116.7,"worstFrameMs":116.7,"droppedFrames":41,"scrollLongTaskMs":1727,"heapDeltaMB":-47.8,"timeout":false,"usability":{"fixed":0,"rowHeight":1,"hVirtual":0,"width":1,"noBlank":0},"easeOfUse":{"score":3.5,"note":"文档完善、风格规范统一，虚拟表格 API 版本间变动大"}},{"table":"primevue","renderType":"Vue DOM","version":"4.5.5","renderMs":945,"firstPaintMs":0,"domNodes":1459,"renderLongTaskMs":621,"scrollMethod":"wheel+scroll+drag","scrolledPx":177561,"pxPerSec":22970,"blankPct":"-","avgFps":16.8,"lowFps1pct":3.2,"p99FrameMs":366.7,"worstFrameMs":366.7,"droppedFrames":24,"scrollLongTaskMs":11134,"heapDeltaMB":215.9,"timeout":false,"usability":{"fixed":1,"rowHeight":0.5,"hVirtual":0,"width":1,"noBlank":0},"easeOfUse":{"score":3,"note":"文档丰富但 v4 主题体系需额外配置，上手易踩坑"}},{"table":"v-table","renderType":"Canvas","version":"1.26.6","renderMs":493,"firstPaintMs":63,"domNodes":25,"renderLongTaskMs":181,"scrollMethod":"wheel","scrolledPx":0,"pxPerSec":"-","blankPct":"-","avgFps":28.3,"lowFps1pct":20,"p99FrameMs":66.6,"worstFrameMs":66.6,"droppedFrames":15,"scrollLongTaskMs":61,"heapDeltaMB":-228.6,"timeout":false,"usability":{"fixed":1,"rowHeight":1,"hVirtual":1,"width":1,"noBlank":1},"easeOfUse":{"score":3,"note":"canvas 渲染模型特殊，配置模型学习成本较高"}},{"table":"ag-grid","renderType":"JS DOM","version":"36.1.0","renderMs":491,"firstPaintMs":0,"domNodes":2072,"renderLongTaskMs":192,"scrollMethod":"wheel+scroll+drag","scrolledPx":190753,"pxPerSec":46355,"blankPct":"-","avgFps":34,"lowFps1pct":10,"p99FrameMs":116.6,"worstFrameMs":116.6,"droppedFrames":31,"scrollLongTaskMs":3583,"heapDeltaMB":52.4,"timeout":false,"usability":{"fixed":1,"rowHeight":1,"hVirtual":1,"width":1,"noBlank":1},"easeOfUse":{"score":3.5,"note":"文档与示例完善、功能强大，但概念较多且社区版有功能限制"}},{"table":"tanstack-virtual","renderType":"JS DOM","version":"3.13.35","renderMs":315,"firstPaintMs":0,"domNodes":1376,"renderLongTaskMs":0,"scrollMethod":"wheel+scroll+drag","scrolledPx":202447,"pxPerSec":56463,"blankPct":"-","avgFps":52.9,"lowFps1pct":20,"p99FrameMs":50.1,"worstFrameMs":50.1,"droppedFrames":9,"scrollLongTaskMs":61,"heapDeltaMB":-42.8,"timeout":false,"usability":{"fixed":0,"rowHeight":1,"hVirtual":0,"width":1,"noBlank":0},"easeOfUse":{"score":3,"note":"headless API 简洁，但 UI、固定列、表头全需手写"}},{"table":"revogrid","renderType":"Web Component","version":"4.26.0","renderMs":398,"firstPaintMs":51,"domNodes":593,"renderLongTaskMs":0,"scrollMethod":"wheel+scroll+drag","scrolledPx":209261,"pxPerSec":58526,"blankPct":"-","avgFps":60,"lowFps1pct":58.1,"p99FrameMs":17.2,"worstFrameMs":17.3,"droppedFrames":0,"scrollLongTaskMs":0,"heapDeltaMB":39.3,"timeout":false,"usability":{"fixed":1,"rowHeight":1,"hVirtual":1,"width":1,"noBlank":1},"easeOfUse":{"score":3.5,"note":"Web Component 零配置即可用、性能强悍，但 Vue 集成需 loader 注册，文档偏底层"}},{"table":"canvas-vue-table","renderType":"Canvas","version":"0.0.6","renderMs":284,"firstPaintMs":51,"domNodes":26,"renderLongTaskMs":0,"scrollMethod":"wheel+scroll+drag","scrolledPx":206501,"pxPerSec":57870,"blankPct":"-","avgFps":60,"lowFps1pct":58.1,"p99FrameMs":17.2,"worstFrameMs":17.2,"droppedFrames":0,"scrollLongTaskMs":0,"heapDeltaMB":-38.8,"timeout":false,"usability":{"fixed":1,"rowHeight":0,"hVirtual":0,"width":1,"noBlank":1},"easeOfUse":{"score":2.5,"note":"API 简洁，但生态极小、文档少；行高硬编码最小39px无法压至28px，横向非逐列虚拟化"}},{"table":"simple-table","renderType":"Vue DOM","version":"4.1.6","renderMs":1118,"firstPaintMs":0,"domNodes":1962,"renderLongTaskMs":785,"scrollMethod":"wheel+scroll+drag","scrolledPx":195243,"pxPerSec":47726,"blankPct":"-","avgFps":32.2,"lowFps1pct":4.6,"p99FrameMs":250,"worstFrameMs":250,"droppedFrames":33,"scrollLongTaskMs":3922,"heapDeltaMB":-5.1,"timeout":false,"usability":{"fixed":1,"rowHeight":1,"hVirtual":1,"width":1,"noBlank":0},"easeOfUse":{"score":3.5,"note":"API 现代、双虚拟开箱即用，但 Community 授权非开源可商用，需付费"}}]; // eslint-disable-line
-  var META = {"time":"2026/8/18 12:22:57","scrollDuration":5000}; // eslint-disable-line
+  // [{"table":"stk-table-vue","renderType":"Vue DOM","version":"1.1.0","renderMs":330,"firstPaintMs":0,"domNodes":851,"renderLongTaskMs":0,"scrollMethod":"wheel+scroll+drag","scrolledPx":223717,"pxPerSec":59785,"blankPct":"-","avgFps":45.6,"lowFps1pct":10,"p99FrameMs":100,"worstFrameMs":100,"droppedFrames":16,"scrollLongTaskMs":294,"heapDeltaMB":-79.5,"timeout":false,"usability":{"fixed":1,"rowHeight":1,"hVirtual":1,"width":1,"filtering":1,"sorting":1,"editing":1,"export":1,"treeExpand":1,"cellMerge":1,"headerGroup":1,"rangeSelection":1,"noBlank":1,"featureScore":12},"easeOfUse":{"score":4.5,"note":"配置简洁、API 直观，文档完善，开箱即用"}},{"table":"vxe-table","renderType":"Vue DOM","version":"4.20.12","renderMs":1073,"firstPaintMs":0,"domNodes":2837,"renderLongTaskMs":738,"scrollMethod":"wheel+scroll+drag","scrolledPx":193701,"pxPerSec":47342,"blankPct":"-","avgFps":32.6,"lowFps1pct":15,"p99FrameMs":583.4,"worstFrameMs":583.4,"droppedFrames":42,"scrollLongTaskMs":2973,"heapDeltaMB":70.5,"timeout":false,"usability":{"fixed":1,"rowHeight":1,"hVirtual":1,"width":1,"filtering":1,"sorting":1,"editing":1,"export":1,"treeExpand":1,"cellMerge":1,"headerGroup":1,"rangeSelection":1,"noBlank":1,"featureScore":12},"easeOfUse":{"score":3,"note":"功能全面但配置项繁多，文档庞大，学习成本高"}},{"table":"naive-ui","renderType":"Vue DOM","version":"2.44.1","renderMs":387,"firstPaintMs":0,"domNodes":1221,"renderLongTaskMs":62,"scrollMethod":"wheel+scroll+drag","scrolledPx":213387,"pxPerSec":48997,"blankPct":"-","avgFps":27.5,"lowFps1pct":4.3,"p99FrameMs":266.6,"worstFrameMs":266.6,"droppedFrames":46,"scrollLongTaskMs":1565,"heapDeltaMB":-31.3,"timeout":false,"usability":{"fixed":1,"rowHeight":0.5,"hVirtual":0.5,"width":1,"filtering":1,"sorting":1,"editing":0.5,"export":0,"treeExpand":0.5,"cellMerge":0,"headerGroup":1,"rangeSelection":0,"noBlank":1,"featureScore":7},"easeOfUse":{"score":4.5,"note":"类型提示完善、文档清晰，虚拟表格开箱即用"}},{"table":"element-plus","renderType":"Vue DOM","version":"2.14.4","renderMs":364,"firstPaintMs":0,"domNodes":2053,"renderLongTaskMs":75,"scrollMethod":"wheel+scroll+drag","scrolledPx":191782,"pxPerSec":38280,"blankPct":"-","avgFps":13.5,"lowFps1pct":7.5,"p99FrameMs":166.6,"worstFrameMs":166.6,"droppedFrames":54,"scrollLongTaskMs":8146,"heapDeltaMB":21.5,"timeout":false,"usability":{"fixed":1,"rowHeight":1,"hVirtual":0,"width":0.5,"filtering":1,"sorting":1,"editing":0.5,"export":0,"treeExpand":0.5,"cellMerge":0.5,"headerGroup":1,"rangeSelection":0,"noBlank":1,"featureScore":7},"easeOfUse":{"score":4,"note":"中文文档完善、生态成熟，TableV2 部分能力需自行封装"}},{"table":"arco-design","renderType":"Vue DOM","version":"2.58.0","renderMs":554,"firstPaintMs":0,"domNodes":3825,"renderLongTaskMs":214,"scrollMethod":"wheel+scroll+drag","scrolledPx":126533,"pxPerSec":16225,"blankPct":"-","avgFps":16.2,"lowFps1pct":3.2,"p99FrameMs":366.6,"worstFrameMs":366.6,"droppedFrames":24,"scrollLongTaskMs":11482,"heapDeltaMB":35,"timeout":false,"usability":{"fixed":0,"rowHeight":0,"hVirtual":0,"width":1,"filtering":1,"sorting":1,"editing":0,"export":0,"treeExpand":0.5,"cellMerge":0,"headerGroup":1,"rangeSelection":0,"noBlank":0,"featureScore":4.5},"easeOfUse":{"score":3.5,"note":"API 简洁、文档清晰，但大数据场景能力薄弱"}},{"table":"tdesign","renderType":"Vue DOM","version":"1.20.6","renderMs":587,"firstPaintMs":0,"domNodes":1591,"renderLongTaskMs":165,"scrollMethod":"wheel+scroll+drag","scrolledPx":185237,"pxPerSec":48985,"blankPct":"-","avgFps":50.2,"lowFps1pct":15.1,"p99FrameMs":66.4,"worstFrameMs":66.4,"droppedFrames":18,"scrollLongTaskMs":2066,"heapDeltaMB":-88.7,"timeout":false,"usability":{"fixed":0.5,"rowHeight":0.5,"hVirtual":0,"width":1,"filtering":1,"sorting":1,"editing":1,"export":0,"treeExpand":0.5,"cellMerge":0.5,"headerGroup":1,"rangeSelection":0.5,"noBlank":0,"featureScore":7.5},"easeOfUse":{"score":3,"note":"上手简单但文档细节一般，虚拟滚动配置需自行探索"}},{"table":"ant-design-vue(surely-vue)","renderType":"Vue DOM","version":"5.1.6","renderMs":487,"firstPaintMs":0,"domNodes":1281,"renderLongTaskMs":176,"scrollMethod":"wheel+scroll+drag","scrolledPx":194136,"pxPerSec":52479,"blankPct":"-","avgFps":50.9,"lowFps1pct":20,"p99FrameMs":99.9,"worstFrameMs":99.9,"droppedFrames":8,"scrollLongTaskMs":89,"heapDeltaMB":20.9,"timeout":false,"usability":{"fixed":1,"rowHeight":0.5,"hVirtual":0.5,"width":1,"filtering":1,"sorting":1,"editing":0,"export":0,"treeExpand":0.5,"cellMerge":0,"headerGroup":1,"rangeSelection":0,"noBlank":1,"featureScore":6.5},"easeOfUse":{"score":3,"note":"继承 antd 配置体系，文档较少，hVirtual 启用需摸索"}},{"table":"vuetify","renderType":"Vue DOM","version":"3.13.1","renderMs":738,"firstPaintMs":0,"domNodes":1094,"renderLongTaskMs":430,"scrollMethod":"wheel+scroll+drag","scrolledPx":195403,"pxPerSec":45315,"blankPct":"-","avgFps":36,"lowFps1pct":15,"p99FrameMs":99.9,"worstFrameMs":99.9,"droppedFrames":42,"scrollLongTaskMs":2613,"heapDeltaMB":144,"timeout":false,"usability":{"fixed":0,"rowHeight":1,"hVirtual":0,"width":1,"filtering":1,"sorting":1,"editing":0.5,"export":0,"treeExpand":0.5,"cellMerge":0,"headerGroup":0,"rangeSelection":0,"noBlank":0,"featureScore":5},"easeOfUse":{"score":3.5,"note":"文档完善、风格规范统一，虚拟表格 API 版本间变动大"}},{"table":"primevue","renderType":"Vue DOM","version":"4.5.5","renderMs":1076,"firstPaintMs":0,"domNodes":1459,"renderLongTaskMs":770,"scrollMethod":"wheel+scroll+drag","scrolledPx":173511,"pxPerSec":21991,"blankPct":"-","avgFps":16.6,"lowFps1pct":3.3,"p99FrameMs":400,"worstFrameMs":400,"droppedFrames":24,"scrollLongTaskMs":11791,"heapDeltaMB":-47.9,"timeout":false,"usability":{"fixed":1,"rowHeight":0.5,"hVirtual":0,"width":1,"filtering":1,"sorting":1,"editing":1,"export":1,"treeExpand":0.5,"cellMerge":0.5,"headerGroup":0.5,"rangeSelection":0.5,"noBlank":0,"featureScore":8.5},"easeOfUse":{"score":3,"note":"文档丰富但 v4 主题体系需额外配置，上手易踩坑"}},{"table":"v-table","renderType":"Canvas","version":"1.26.6","renderMs":542,"firstPaintMs":71,"domNodes":25,"renderLongTaskMs":188,"scrollMethod":"wheel","scrolledPx":0,"pxPerSec":"-","blankPct":"-","avgFps":25.4,"lowFps1pct":15,"p99FrameMs":66.8,"worstFrameMs":66.8,"droppedFrames":20,"scrollLongTaskMs":0,"heapDeltaMB":98.4,"timeout":false,"usability":{"fixed":1,"rowHeight":1,"hVirtual":1,"width":1,"filtering":1,"sorting":1,"editing":1,"export":1,"treeExpand":1,"cellMerge":1,"headerGroup":1,"rangeSelection":1,"noBlank":1,"featureScore":12},"easeOfUse":{"score":3,"note":"canvas 渲染模型特殊，配置模型学习成本较高"}},{"table":"ag-grid","renderType":"JS DOM","version":"36.1.0","renderMs":494,"firstPaintMs":0,"domNodes":2072,"renderLongTaskMs":227,"scrollMethod":"wheel+scroll+drag","scrolledPx":196834,"pxPerSec":44075,"blankPct":"-","avgFps":34.1,"lowFps1pct":8.6,"p99FrameMs":116.6,"worstFrameMs":116.6,"droppedFrames":34,"scrollLongTaskMs":3765,"heapDeltaMB":-162,"timeout":false,"usability":{"fixed":1,"rowHeight":1,"hVirtual":1,"width":1,"filtering":1,"sorting":1,"editing":1,"export":1,"treeExpand":1,"cellMerge":1,"headerGroup":1,"rangeSelection":1,"noBlank":1,"featureScore":12},"easeOfUse":{"score":3.5,"note":"文档与示例完善、功能强大，但概念较多且社区版有功能限制"}},{"table":"tanstack-virtual","renderType":"JS DOM","version":"3.13.35","renderMs":334,"firstPaintMs":62,"domNodes":1376,"renderLongTaskMs":0,"scrollMethod":"wheel+scroll+drag","scrolledPx":203280,"pxPerSec":56905,"blankPct":"-","avgFps":53.1,"lowFps1pct":20,"p99FrameMs":50.1,"worstFrameMs":50.1,"droppedFrames":6,"scrollLongTaskMs":0,"heapDeltaMB":-47.6,"timeout":false,"usability":{"fixed":0,"rowHeight":1,"hVirtual":0,"width":1,"filtering":0,"sorting":0,"editing":0,"export":0,"treeExpand":0,"cellMerge":0,"headerGroup":0,"rangeSelection":0,"noBlank":0,"featureScore":2},"easeOfUse":{"score":3,"note":"headless API 简洁，但 UI、固定列、表头全需手写"}},{"table":"revogrid","renderType":"Web Component","version":"4.26.0","renderMs":407,"firstPaintMs":50,"domNodes":593,"renderLongTaskMs":0,"scrollMethod":"wheel+scroll+drag","scrolledPx":206491,"pxPerSec":58281,"blankPct":"-","avgFps":60,"lowFps1pct":58,"p99FrameMs":17.3,"worstFrameMs":17.3,"droppedFrames":0,"scrollLongTaskMs":0,"heapDeltaMB":52.2,"timeout":false,"usability":{"fixed":1,"rowHeight":1,"hVirtual":1,"width":1,"filtering":0,"sorting":0,"editing":1,"export":0,"treeExpand":0,"cellMerge":0.5,"headerGroup":0,"rangeSelection":0.5,"noBlank":1,"featureScore":6},"easeOfUse":{"score":3.5,"note":"Web Component 零配置即可用、性能强悍，但 Vue 集成需 loader 注册，文档偏底层"}},{"table":"canvas-vue-table","renderType":"Canvas","version":"0.0.6","renderMs":288,"firstPaintMs":0,"domNodes":26,"renderLongTaskMs":0,"scrollMethod":"wheel+scroll+drag","scrolledPx":209400,"pxPerSec":58863,"blankPct":"-","avgFps":60,"lowFps1pct":58.1,"p99FrameMs":17.3,"worstFrameMs":17.3,"droppedFrames":0,"scrollLongTaskMs":0,"heapDeltaMB":-57.3,"timeout":false,"usability":{"fixed":1,"rowHeight":0,"hVirtual":0,"width":1,"filtering":0,"sorting":0,"editing":0,"export":0,"treeExpand":0,"cellMerge":0,"headerGroup":0,"rangeSelection":0,"noBlank":1,"featureScore":2},"easeOfUse":{"score":2.5,"note":"API 简洁，但生态极小、文档少；行高硬编码最小39px无法压至28px，横向非逐列虚拟化"}},{"table":"simple-table","renderType":"Vue DOM","version":"4.1.6","renderMs":1135,"firstPaintMs":0,"domNodes":1962,"renderLongTaskMs":861,"scrollMethod":"wheel+scroll+drag","scrolledPx":190257,"pxPerSec":46300,"blankPct":"-","avgFps":31.4,"lowFps1pct":5.5,"p99FrameMs":250,"worstFrameMs":250,"droppedFrames":36,"scrollLongTaskMs":4041,"heapDeltaMB":46.1,"timeout":false,"usability":{"fixed":1,"rowHeight":1,"hVirtual":1,"width":1,"filtering":1,"sorting":1,"editing":1,"export":1,"treeExpand":1,"cellMerge":1,"headerGroup":1,"rangeSelection":0,"noBlank":0,"featureScore":11},"easeOfUse":{"score":3.5,"note":"API 现代、双虚拟开箱即用，但 Community 授权非开源可商用，需付费"}}] / {"time":"2026/8/18 14:12:14","scrollDuration":5000} 为占位符，由 run-perf.mjs 生成报告时替换为真实数据
+  var DATA = [{"table":"stk-table-vue","renderType":"Vue DOM","version":"1.1.0","renderMs":330,"firstPaintMs":0,"domNodes":851,"renderLongTaskMs":0,"scrollMethod":"wheel+scroll+drag","scrolledPx":223717,"pxPerSec":59785,"blankPct":"-","avgFps":45.6,"lowFps1pct":10,"p99FrameMs":100,"worstFrameMs":100,"droppedFrames":16,"scrollLongTaskMs":294,"heapDeltaMB":-79.5,"timeout":false,"usability":{"fixed":1,"rowHeight":1,"hVirtual":1,"width":1,"filtering":1,"sorting":1,"editing":1,"export":1,"treeExpand":1,"cellMerge":1,"headerGroup":1,"rangeSelection":1,"noBlank":1,"featureScore":12},"easeOfUse":{"score":4.5,"note":"配置简洁、API 直观，文档完善，开箱即用"}},{"table":"vxe-table","renderType":"Vue DOM","version":"4.20.12","renderMs":1073,"firstPaintMs":0,"domNodes":2837,"renderLongTaskMs":738,"scrollMethod":"wheel+scroll+drag","scrolledPx":193701,"pxPerSec":47342,"blankPct":"-","avgFps":32.6,"lowFps1pct":15,"p99FrameMs":583.4,"worstFrameMs":583.4,"droppedFrames":42,"scrollLongTaskMs":2973,"heapDeltaMB":70.5,"timeout":false,"usability":{"fixed":1,"rowHeight":1,"hVirtual":1,"width":1,"filtering":1,"sorting":1,"editing":1,"export":1,"treeExpand":1,"cellMerge":1,"headerGroup":1,"rangeSelection":1,"noBlank":1,"featureScore":12},"easeOfUse":{"score":3,"note":"功能全面但配置项繁多，文档庞大，学习成本高"}},{"table":"naive-ui","renderType":"Vue DOM","version":"2.44.1","renderMs":387,"firstPaintMs":0,"domNodes":1221,"renderLongTaskMs":62,"scrollMethod":"wheel+scroll+drag","scrolledPx":213387,"pxPerSec":48997,"blankPct":"-","avgFps":27.5,"lowFps1pct":4.3,"p99FrameMs":266.6,"worstFrameMs":266.6,"droppedFrames":46,"scrollLongTaskMs":1565,"heapDeltaMB":-31.3,"timeout":false,"usability":{"fixed":1,"rowHeight":0.5,"hVirtual":0.5,"width":1,"filtering":1,"sorting":1,"editing":0.5,"export":0,"treeExpand":0.5,"cellMerge":0,"headerGroup":1,"rangeSelection":0,"noBlank":1,"featureScore":7},"easeOfUse":{"score":4.5,"note":"类型提示完善、文档清晰，虚拟表格开箱即用"}},{"table":"element-plus","renderType":"Vue DOM","version":"2.14.4","renderMs":364,"firstPaintMs":0,"domNodes":2053,"renderLongTaskMs":75,"scrollMethod":"wheel+scroll+drag","scrolledPx":191782,"pxPerSec":38280,"blankPct":"-","avgFps":13.5,"lowFps1pct":7.5,"p99FrameMs":166.6,"worstFrameMs":166.6,"droppedFrames":54,"scrollLongTaskMs":8146,"heapDeltaMB":21.5,"timeout":false,"usability":{"fixed":1,"rowHeight":1,"hVirtual":0,"width":0.5,"filtering":1,"sorting":1,"editing":0.5,"export":0,"treeExpand":0.5,"cellMerge":0.5,"headerGroup":1,"rangeSelection":0,"noBlank":1,"featureScore":7},"easeOfUse":{"score":4,"note":"中文文档完善、生态成熟，TableV2 部分能力需自行封装"}},{"table":"arco-design","renderType":"Vue DOM","version":"2.58.0","renderMs":554,"firstPaintMs":0,"domNodes":3825,"renderLongTaskMs":214,"scrollMethod":"wheel+scroll+drag","scrolledPx":126533,"pxPerSec":16225,"blankPct":"-","avgFps":16.2,"lowFps1pct":3.2,"p99FrameMs":366.6,"worstFrameMs":366.6,"droppedFrames":24,"scrollLongTaskMs":11482,"heapDeltaMB":35,"timeout":false,"usability":{"fixed":0,"rowHeight":0,"hVirtual":0,"width":1,"filtering":1,"sorting":1,"editing":0,"export":0,"treeExpand":0.5,"cellMerge":0,"headerGroup":1,"rangeSelection":0,"noBlank":0,"featureScore":4.5},"easeOfUse":{"score":3.5,"note":"API 简洁、文档清晰，但大数据场景能力薄弱"}},{"table":"tdesign","renderType":"Vue DOM","version":"1.20.6","renderMs":587,"firstPaintMs":0,"domNodes":1591,"renderLongTaskMs":165,"scrollMethod":"wheel+scroll+drag","scrolledPx":185237,"pxPerSec":48985,"blankPct":"-","avgFps":50.2,"lowFps1pct":15.1,"p99FrameMs":66.4,"worstFrameMs":66.4,"droppedFrames":18,"scrollLongTaskMs":2066,"heapDeltaMB":-88.7,"timeout":false,"usability":{"fixed":0.5,"rowHeight":0.5,"hVirtual":0,"width":1,"filtering":1,"sorting":1,"editing":1,"export":0,"treeExpand":0.5,"cellMerge":0.5,"headerGroup":1,"rangeSelection":0.5,"noBlank":0,"featureScore":7.5},"easeOfUse":{"score":3,"note":"上手简单但文档细节一般，虚拟滚动配置需自行探索"}},{"table":"ant-design-vue(surely-vue)","renderType":"Vue DOM","version":"5.1.6","renderMs":487,"firstPaintMs":0,"domNodes":1281,"renderLongTaskMs":176,"scrollMethod":"wheel+scroll+drag","scrolledPx":194136,"pxPerSec":52479,"blankPct":"-","avgFps":50.9,"lowFps1pct":20,"p99FrameMs":99.9,"worstFrameMs":99.9,"droppedFrames":8,"scrollLongTaskMs":89,"heapDeltaMB":20.9,"timeout":false,"usability":{"fixed":1,"rowHeight":0.5,"hVirtual":0.5,"width":1,"filtering":1,"sorting":1,"editing":0,"export":0,"treeExpand":0.5,"cellMerge":0,"headerGroup":1,"rangeSelection":0,"noBlank":1,"featureScore":6.5},"easeOfUse":{"score":3,"note":"继承 antd 配置体系，文档较少，hVirtual 启用需摸索"}},{"table":"vuetify","renderType":"Vue DOM","version":"3.13.1","renderMs":738,"firstPaintMs":0,"domNodes":1094,"renderLongTaskMs":430,"scrollMethod":"wheel+scroll+drag","scrolledPx":195403,"pxPerSec":45315,"blankPct":"-","avgFps":36,"lowFps1pct":15,"p99FrameMs":99.9,"worstFrameMs":99.9,"droppedFrames":42,"scrollLongTaskMs":2613,"heapDeltaMB":144,"timeout":false,"usability":{"fixed":0,"rowHeight":1,"hVirtual":0,"width":1,"filtering":1,"sorting":1,"editing":0.5,"export":0,"treeExpand":0.5,"cellMerge":0,"headerGroup":0,"rangeSelection":0,"noBlank":0,"featureScore":5},"easeOfUse":{"score":3.5,"note":"文档完善、风格规范统一，虚拟表格 API 版本间变动大"}},{"table":"primevue","renderType":"Vue DOM","version":"4.5.5","renderMs":1076,"firstPaintMs":0,"domNodes":1459,"renderLongTaskMs":770,"scrollMethod":"wheel+scroll+drag","scrolledPx":173511,"pxPerSec":21991,"blankPct":"-","avgFps":16.6,"lowFps1pct":3.3,"p99FrameMs":400,"worstFrameMs":400,"droppedFrames":24,"scrollLongTaskMs":11791,"heapDeltaMB":-47.9,"timeout":false,"usability":{"fixed":1,"rowHeight":0.5,"hVirtual":0,"width":1,"filtering":1,"sorting":1,"editing":1,"export":1,"treeExpand":0.5,"cellMerge":0.5,"headerGroup":0.5,"rangeSelection":0.5,"noBlank":0,"featureScore":8.5},"easeOfUse":{"score":3,"note":"文档丰富但 v4 主题体系需额外配置，上手易踩坑"}},{"table":"v-table","renderType":"Canvas","version":"1.26.6","renderMs":542,"firstPaintMs":71,"domNodes":25,"renderLongTaskMs":188,"scrollMethod":"wheel","scrolledPx":0,"pxPerSec":"-","blankPct":"-","avgFps":25.4,"lowFps1pct":15,"p99FrameMs":66.8,"worstFrameMs":66.8,"droppedFrames":20,"scrollLongTaskMs":0,"heapDeltaMB":98.4,"timeout":false,"usability":{"fixed":1,"rowHeight":1,"hVirtual":1,"width":1,"filtering":1,"sorting":1,"editing":1,"export":1,"treeExpand":1,"cellMerge":1,"headerGroup":1,"rangeSelection":1,"noBlank":1,"featureScore":12},"easeOfUse":{"score":3,"note":"canvas 渲染模型特殊，配置模型学习成本较高"}},{"table":"ag-grid","renderType":"JS DOM","version":"36.1.0","renderMs":494,"firstPaintMs":0,"domNodes":2072,"renderLongTaskMs":227,"scrollMethod":"wheel+scroll+drag","scrolledPx":196834,"pxPerSec":44075,"blankPct":"-","avgFps":34.1,"lowFps1pct":8.6,"p99FrameMs":116.6,"worstFrameMs":116.6,"droppedFrames":34,"scrollLongTaskMs":3765,"heapDeltaMB":-162,"timeout":false,"usability":{"fixed":1,"rowHeight":1,"hVirtual":1,"width":1,"filtering":1,"sorting":1,"editing":1,"export":1,"treeExpand":1,"cellMerge":1,"headerGroup":1,"rangeSelection":1,"noBlank":1,"featureScore":12},"easeOfUse":{"score":3.5,"note":"文档与示例完善、功能强大，但概念较多且社区版有功能限制"}},{"table":"tanstack-virtual","renderType":"JS DOM","version":"3.13.35","renderMs":334,"firstPaintMs":62,"domNodes":1376,"renderLongTaskMs":0,"scrollMethod":"wheel+scroll+drag","scrolledPx":203280,"pxPerSec":56905,"blankPct":"-","avgFps":53.1,"lowFps1pct":20,"p99FrameMs":50.1,"worstFrameMs":50.1,"droppedFrames":6,"scrollLongTaskMs":0,"heapDeltaMB":-47.6,"timeout":false,"usability":{"fixed":0,"rowHeight":1,"hVirtual":0,"width":1,"filtering":0,"sorting":0,"editing":0,"export":0,"treeExpand":0,"cellMerge":0,"headerGroup":0,"rangeSelection":0,"noBlank":0,"featureScore":2},"easeOfUse":{"score":3,"note":"headless API 简洁，但 UI、固定列、表头全需手写"}},{"table":"revogrid","renderType":"Web Component","version":"4.26.0","renderMs":407,"firstPaintMs":50,"domNodes":593,"renderLongTaskMs":0,"scrollMethod":"wheel+scroll+drag","scrolledPx":206491,"pxPerSec":58281,"blankPct":"-","avgFps":60,"lowFps1pct":58,"p99FrameMs":17.3,"worstFrameMs":17.3,"droppedFrames":0,"scrollLongTaskMs":0,"heapDeltaMB":52.2,"timeout":false,"usability":{"fixed":1,"rowHeight":1,"hVirtual":1,"width":1,"filtering":0,"sorting":0,"editing":1,"export":0,"treeExpand":0,"cellMerge":0.5,"headerGroup":0,"rangeSelection":0.5,"noBlank":1,"featureScore":6},"easeOfUse":{"score":3.5,"note":"Web Component 零配置即可用、性能强悍，但 Vue 集成需 loader 注册，文档偏底层"}},{"table":"canvas-vue-table","renderType":"Canvas","version":"0.0.6","renderMs":288,"firstPaintMs":0,"domNodes":26,"renderLongTaskMs":0,"scrollMethod":"wheel+scroll+drag","scrolledPx":209400,"pxPerSec":58863,"blankPct":"-","avgFps":60,"lowFps1pct":58.1,"p99FrameMs":17.3,"worstFrameMs":17.3,"droppedFrames":0,"scrollLongTaskMs":0,"heapDeltaMB":-57.3,"timeout":false,"usability":{"fixed":1,"rowHeight":0,"hVirtual":0,"width":1,"filtering":0,"sorting":0,"editing":0,"export":0,"treeExpand":0,"cellMerge":0,"headerGroup":0,"rangeSelection":0,"noBlank":1,"featureScore":2},"easeOfUse":{"score":2.5,"note":"API 简洁，但生态极小、文档少；行高硬编码最小39px无法压至28px，横向非逐列虚拟化"}},{"table":"simple-table","renderType":"Vue DOM","version":"4.1.6","renderMs":1135,"firstPaintMs":0,"domNodes":1962,"renderLongTaskMs":861,"scrollMethod":"wheel+scroll+drag","scrolledPx":190257,"pxPerSec":46300,"blankPct":"-","avgFps":31.4,"lowFps1pct":5.5,"p99FrameMs":250,"worstFrameMs":250,"droppedFrames":36,"scrollLongTaskMs":4041,"heapDeltaMB":46.1,"timeout":false,"usability":{"fixed":1,"rowHeight":1,"hVirtual":1,"width":1,"filtering":1,"sorting":1,"editing":1,"export":1,"treeExpand":1,"cellMerge":1,"headerGroup":1,"rangeSelection":0,"noBlank":0,"featureScore":11},"easeOfUse":{"score":3.5,"note":"API 现代、双虚拟开箱即用，但 Community 授权非开源可商用，需付费"}}]; // eslint-disable-line
+  var META = {"time":"2026/8/18 14:12:14","scrollDuration":5000}; // eslint-disable-line
 
   var COLORS = [
     '#5b8ff9', '#5ad8a6', '#f6bd16', '#e86452', '#6dc8ec',
@@ -225,7 +281,7 @@
   // ---------------- 雷达图 ----------------
   var DIMS = [
     { key: 'renderMs', name: '渲染速度', lower: true },
-    { key: 'pxPerSec', name: '无白屏速度', lower: false },
+    { key: 'usability.featureScore', name: '功能丰富度', lower: false },
     { key: 'avgFps', name: '平均FPS', lower: false },
     { key: 'lowFps1pct', name: '1%low FPS', lower: false },
     { key: 'droppedFrames', name: '掉帧控制', lower: true },
@@ -277,9 +333,10 @@
     },
     radar: {
       indicator: DIMS.map(function (d) { return { name: d.name, max: 100 }; }),
-      radius: '68%',
+      center: ['50%', '50%'],
+      radius: '60%',
       splitArea: { areaStyle: { opacity: 0.3 } },
-      axisName: { color: '#1f2329', fontSize: 15, fontWeight: 600 },
+      axisName: { color: '#1f2329', fontSize: 13, fontWeight: 600 },
     },
     series: [{ type: 'radar', data: [] }],
     animationDuration: 300,
@@ -305,12 +362,10 @@
     item.appendChild(label);
     item.addEventListener('mouseenter', function () {
       paused = true;
-      document.getElementById('pauseBadge').style.visibility = 'visible';
       showRadar(i);
     });
     item.addEventListener('mouseleave', function () {
       paused = false;
-      document.getElementById('pauseBadge').style.visibility = 'hidden';
     });
     item.addEventListener('click', function () { showRadar(i); });
     legendEl.appendChild(item);
@@ -360,14 +415,23 @@
     progressEl.style.background = colorOf(curIdx);
   }, 50);
   showRadar(0);
+  // 确保布局完成后重新调整雷达图尺寸
+  requestAnimationFrame(function () { radarChart.resize(); });
 
-  // ---------------- 可用性对比 ----------------
+  // ---------------- 功能丰富度对比 ----------------
   var FEATURES = [
     { key: 'fixed', name: '列固定' },
     { key: 'rowHeight', name: '行高控制' },
     { key: 'hVirtual', name: '横向虚拟列表' },
     { key: 'width', name: '宽度控制' },
-    { key: 'noBlank', name: '滚动无白屏' },
+    { key: 'filtering', name: '列筛选' },
+    { key: 'sorting', name: '列排序' },
+    { key: 'editing', name: '单元格编辑' },
+    { key: 'export', name: '导出' },
+    { key: 'treeExpand', name: '树形/展开行' },
+    { key: 'cellMerge', name: '合并单元格' },
+    { key: 'headerGroup', name: '表头分组' },
+    { key: 'rangeSelection', name: '区域选择' },
   ];
   function mark(v) {
     if (v === 1) return '<span class="mark-ok">✓ 支持</span>';
@@ -395,10 +459,12 @@
   }).join('');
   var fullOk = DATA.filter(function (d) {
     var u = d.usability || {};
-    return u.fixed === 1 && u.rowHeight === 1 && u.hVirtual === 1 && u.width === 1 && u.noBlank === 1;
+    return u.fixed === 1 && u.rowHeight === 1 && u.hVirtual === 1 && u.width === 1
+      && u.filtering === 1 && u.sorting === 1 && u.editing === 1 && u.export === 1
+      && u.treeExpand === 1 && u.cellMerge === 1 && u.headerGroup === 1 && u.rangeSelection === 1;
   }).length;
   statsHtml +=
-    '<div class="u-stat"><div class="u-name">五维全部达标</div>' +
+    '<div class="u-stat"><div class="u-name">十二维全部达标</div>' +
     '<div class="u-num"><span class="u-total">' + fullOk + '/' + DATA.length + '</span></div></div>';
   document.getElementById('usabilityStats').innerHTML = statsHtml;
 
@@ -417,7 +483,7 @@
       return (
         '<tr><td>' + r.name + '</td>' +
         FEATURES.map(function (f) { return '<td>' + mark(r.u[f.key]) + '</td>'; }).join('') +
-        '<td class="u-score">' + r.score + '/5</td></tr>'
+        '<td class="u-score">' + r.score + '/12</td></tr>'
       );
     })
     .join('');
@@ -574,6 +640,62 @@
     window.addEventListener('resize', function () { chart.resize(); });
   });
   window.addEventListener('resize', function () { radarChart.resize(); });
+
+  // ---------------- 右侧导航：滚动高亮 + 平滑跳转 ----------------
+  var navLinks = document.querySelectorAll('#sideNav a');
+  function updateNav() {
+    var scrollY = window.scrollY + 120;
+    var activeId = 'radar';
+    navLinks.forEach(function (a) {
+      var el = document.getElementById(a.getAttribute('data-section'));
+      if (el && el.offsetTop <= scrollY) activeId = a.getAttribute('data-section');
+    });
+    navLinks.forEach(function (a) {
+      a.classList.toggle('active', a.getAttribute('data-section') === activeId);
+    });
+  }
+  window.addEventListener('scroll', updateNav);
+  updateNav();
+  // ---------------- 右侧导航：不滚动自动收起 ----------------
+  var navLinksEl = document.getElementById('navLinks');
+  var collapseTimer = null;
+  var COLLAPSE_DELAY = 2000; // 停止滚动 2s 后自动收起
+
+  function collapseNav() { navLinksEl.classList.add('collapsed'); }
+  function expandNav() {
+    navLinksEl.classList.remove('collapsed');
+    clearTimeout(collapseTimer);
+  }
+  function resetCollapseTimer() {
+    expandNav();
+    clearTimeout(collapseTimer);
+    collapseTimer = setTimeout(collapseNav, COLLAPSE_DELAY);
+  }
+
+  // 滚动时展开并重置计时器
+  window.addEventListener('scroll', resetCollapseTimer, { passive: true });
+  // 鼠标悬停导航区时保持展开
+  document.getElementById('sideNav').addEventListener('mouseenter', expandNav);
+  document.getElementById('sideNav').addEventListener('mouseleave', function () {
+    clearTimeout(collapseTimer);
+    collapseTimer = setTimeout(collapseNav, COLLAPSE_DELAY);
+  });
+  // 点击 ☰ 按钮手动切换
+  document.getElementById('navToggle').addEventListener('click', function () {
+    navLinksEl.classList.toggle('collapsed');
+    clearTimeout(collapseTimer);
+  });
+  // 点击链接后收起
+  navLinks.forEach(function (a) {
+    a.addEventListener('click', function (e) {
+      e.preventDefault();
+      var el = document.getElementById(a.getAttribute('data-section'));
+      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      collapseNav();
+    });
+  });
+  // 启动自动收起计时器
+  collapseTimer = setTimeout(collapseNav, COLLAPSE_DELAY);
 </script>
 </body>
 </html>

@@ -16,7 +16,7 @@
       row-key="id"
       bordered
       hover
-      cell-empty-content="--"
+      cell-empty-content=""
       :height="600"
       :scroll="{ type: 'virtual', rowHeight: 28, bufferSize: 10 }"
       :columns
