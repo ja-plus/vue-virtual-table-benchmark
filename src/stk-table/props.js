@@ -83,9 +83,21 @@ export const tableColumns = [
   },
 ];
 export const tableData = new Array(10000).fill(0).map((it, i) => {
-  return {
+  const row = {
     id: i + 'id',
     name: 'name' + i,
     age: 'age' + i,
+    gender: i % 2 === 0 ? 'Male' : 'Female',
+    email: 'user' + i + '@example.com',
+    address: 'Address ' + i,
+    address1: 'Address1 ' + i,
+    address2: 'Address2 ' + i,
+    address3: 'Address3 ' + i,
+    R: String(i),
+    Operate: 'Edit',
   };
+  for (let j = 0; j < 30; j++) {
+    row['other' + j] = 'other-' + i + '-' + j;
+  }
+  return row;
 });

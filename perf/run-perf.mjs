@@ -50,6 +50,25 @@ const PACKAGE_OF = {
   'simple-table': '@simple-table/vue',
 };
 
+// 各表格官网链接
+const URL_MAP = {
+  'stk-table-vue': 'https://ja-plus.github.io/stk-table-vue/',
+  'vxe-table': 'https://vxetable.cn/',
+  'naive-ui': 'https://www.naiveui.com/',
+  'element-plus': 'https://element-plus.org/',
+  'arco-design': 'https://arco.design/vue/',
+  tdesign: 'https://tdesign.tencent.com/vue-next/',
+  'ant-design-vue(surely-vue)': 'https://www.surelyvue.com/',
+  'v-table': 'https://visactor.io/vtable/',
+  'ag-grid': 'https://www.ag-grid.com/',
+  vuetify: 'https://vuetifyjs.com/',
+  primevue: 'https://primevue.org/',
+  'tanstack-virtual': 'https://tanstack.com/virtual/',
+  revogrid: 'https://revolist.github.io/revogrid/',
+  'canvas-vue-table': 'https://yongjianyu.github.io/canvas-vue-table/',
+  'simple-table': 'https://www.simple-table.com/docs/installation',
+};
+
 // 功能丰富度特性配置（取值 1=支持，0.5=部分支持，0=不支持）：
 //   fixed     = 左右固定列
 //   rowHeight = 行高控制（原生支持；需 CSS 压缩实现计 0.5）
@@ -291,25 +310,72 @@ const waitRenderStable = async timeoutMs => {
   };
 };
 
-// 滚动会话：拆分为三种滚动方式，每种都是“向下滚动一段距离后再回到原位”
-// 阶段 1：wheel 事件驱动，步长适中；阶段 2：scrollTop 每帧一页；阶段 3：500ms 超快拖动到底再回顶
-// 核心指标 = 合并三种方式的 FPS/1%low/掉帧数；实际滚动距离为各阶段绝对位移之和
+// 滚动会话：拆分为 scroll 与 drag 两个阶段，每个阶段都是“向下滚动一段距离后再回到原位”
+// 阶段 1：scrollTop 每帧一页；阶段 2：500ms 超快拖动到底再回顶
+// 核心指标 = 合并两个阶段的 FPS/1%low/掉帧数；实际滚动距离为各阶段绝对位移之和
 // canvas 类表格（如 VTable）没有可滚动 DOM，退化为 wheel 事件驱动
 const runScrollSession = args => {
   const { maxScrollPx } = args;
-  // 帧采集：外部通过 stop() 结束（page.evaluate 序列化函数须自包含，故定义在内部）
+  // 帧采集 + 内容变化帧统计：外部通过 stop() 结束（page.evaluate 序列化函数须自包含，故定义在内部）
+  // contentFrames = 发生 DOM 内容变化的帧数：throttle/异步渲染的表格浏览器帧率虚高，
+  // 但真正重绘可见行的帧少，用它可以修正出反映体感的“平滑 FPS”
   const startCollect = () => {
     const frames = [];
     let last;
     let stopped = false;
+    let mutations = 0;
+    let lastMutations = 0;
+    let contentFrames = 0;
+    const observer = new MutationObserver(() => {
+      mutations++;
+    });
+    // 观察整个面板（而非仅滚动容器）：vxe/element 等固定列渲染在容器外的独立层。
+    // 必须同时观察 childList/characterData/attributes：revogrid 等 Stencil scoped 组件
+    // 更新行时常仅改文本节点 data 或 transform 属性，不产生 childList 变更；
+    // Web Component（shadow DOM）内容需递归挂载 shadowRoot
+    const OBSERVE_OPTS = {
+      childList: true,
+      subtree: true,
+      characterData: true,
+      attributes: true,
+    };
+    const observeAll = root => {
+      observer.observe(root, OBSERVE_OPTS);
+      const walk = node => {
+        for (const child of node.querySelectorAll('*')) {
+          if (child.shadowRoot) {
+            observer.observe(child.shadowRoot, OBSERVE_OPTS);
+            walk(child.shadowRoot);
+          }
+        }
+      };
+      walk(root);
+    };
+    observeAll(getPanelRoot() || document.body);
     const loop = t => {
       if (stopped) return;
       if (last != null) frames.push(t - last);
       last = t;
+      if (mutations !== lastMutations) {
+        contentFrames++;
+        lastMutations = mutations;
+      }
       requestAnimationFrame(loop);
     };
     requestAnimationFrame(loop);
-    return { frames, stop: () => (stopped = true) };
+    return {
+      frames,
+      stop: () => {
+        stopped = true;
+        observer.disconnect();
+        // canvas 表格（如 canvas-vue-table）直接在 canvas 上重绘，DOM 全程无变更：
+        // 检测不到任何 mutation 且面板内存在 canvas 时，按每帧都重绘兜底处理（内容更新率≈帧率）
+        if (mutations === 0 && getPanelRoot()?.querySelector('canvas')) {
+          return frames.length;
+        }
+        return contentFrames;
+      },
+    };
   };
 
   const getPanelRoot = () =>
@@ -357,63 +423,8 @@ const runScrollSession = args => {
     return cands[0];
   };
 
-  const panel = getPanelRoot();
-
-  // canvas 表格（canvas-vue-table）直接操作 .cvt 容器的 scrollTop
-  // 因为 canvas-vue-table 阻止了默认的 wheel 行为，wheel 事件不会导致滚动
+  // 查找可滚动容器；canvas 表格通常没有可滚动 DOM
   const el = findScrollContainer();
-
-  // 滚动会话拆分为三个子阶段，每个阶段都是“向下滚动一段距离后再回到原位”。
-  // 阶段 1：wheel 事件驱动，步长取适中值（约 0.45 视口高度，限制在 150~500px）。
-  // 阶段 2：scrollTop 驱动，每帧滚动一页（视口高度）。
-  // 阶段 3：模拟超快拖动滚动条，500ms 内从顶部滚到底部，再快速回顶。
-  const phaseWheel = () =>
-    new Promise(resolve => {
-      // canvas 表格无可滚动 DOM：wheel 事件发送给画布/容器；DOM 表格发给滚动容器
-      const target =
-        el || panel.querySelector('.cvt') || panel.querySelector('canvas') || panel;
-      const r = target.getBoundingClientRect();
-      const viewH = el ? el.clientHeight || 600 : r.height;
-      const stepY = el
-        ? Math.min(500, Math.max(150, Math.round(viewH * 0.45)))
-        : Math.max(400, r.height);
-      const duration = 800; // 总时长控制较短，约一半时间下行、一半上行
-      const start = performance.now();
-      let down = true;
-      let moved = 0;
-      let lastTop = el ? el.scrollTop : 0;
-
-      const fire = dir => {
-        target.dispatchEvent(
-          new WheelEvent('wheel', {
-            deltaY: stepY * dir,
-            clientX: r.left + r.width / 2,
-            clientY: r.top + r.height / 2,
-            bubbles: true,
-            cancelable: true,
-          }),
-        );
-      };
-
-      const tick = () => {
-        const now = performance.now();
-        if (now - start > duration) {
-          // canvas 表格沿用原语义：标记为 -1，表示无法从 DOM 读取实际滚动距离
-          return resolve(
-            el ? { method: 'wheel', moved } : { method: 'wheel', moved: -1 },
-          );
-        }
-        if (now - start > duration / 2) down = false;
-        fire(down ? 1 : -1);
-        if (el) {
-          const top = el.scrollTop;
-          moved += Math.abs(top - lastTop);
-          lastTop = top;
-        }
-        requestAnimationFrame(tick);
-      };
-      requestAnimationFrame(tick);
-    });
 
   const phaseScrollPage = () =>
     new Promise(resolve => {
@@ -485,27 +496,57 @@ const runScrollSession = args => {
       requestAnimationFrame(animate);
     });
 
+  // canvas 表格（如 VTable）无可滚动 DOM：通过合成 wheel 事件驱动其内部滚动重绘
+  const phaseCanvasWheel = () =>
+    new Promise(resolve => {
+      const target = getPanelRoot()?.querySelector('canvas');
+      if (!target) return resolve({ method: 'none', moved: 0 });
+      const r = target.getBoundingClientRect();
+      const stepY = Math.max(400, r.height);
+      const duration = 800; // 前半下行、后半上行，时长与其他阶段对齐
+      const start = performance.now();
+      let down = true;
+      const tick = () => {
+        const now = performance.now();
+        if (now - start > duration) {
+          // canvas 内部滚动距离无法从 DOM 读取，记为 -1
+          return resolve({ method: 'wheel', moved: -1 });
+        }
+        if (now - start > duration / 2) down = false;
+        target.dispatchEvent(
+          new WheelEvent('wheel', {
+            deltaY: stepY * (down ? 1 : -1),
+            clientX: r.left + r.width / 2,
+            clientY: r.top + r.height / 2,
+            bubbles: true,
+            cancelable: true,
+          }),
+        );
+        requestAnimationFrame(tick);
+      };
+      requestAnimationFrame(tick);
+    });
+
   const collector = startCollect();
   const runPhases = async () => {
     if (!el) {
-      // canvas 表格只有一种驱动方式，执行两次 wheel 以匹配“每个阶段两次”
-      await phaseWheel();
-      return phaseWheel();
+      // canvas 表格无可滚动 DOM：wheel 驱动两次，与其他“每阶段两次”口径一致
+      await phaseCanvasWheel();
+      return phaseCanvasWheel();
     }
     const t0 = performance.now();
     // 每个阶段执行两次
-    const wheelResults = [await phaseWheel(), await phaseWheel()];
     const scrollResults = [await phaseScrollPage(), await phaseScrollPage()];
     const dragResults = [await phaseDrag(), await phaseDrag()];
     const dt = (performance.now() - t0) / 1000;
-    const totalMoved = [...wheelResults, ...scrollResults, ...dragResults]
+    const totalMoved = [...scrollResults, ...dragResults]
       .reduce((sum, r) => sum + Math.max(r.moved, 0), 0);
     const pxPerSec = dt > 0.2 ? Math.round(totalMoved / dt) : 0;
-    return { method: 'wheel+scroll+drag', moved: totalMoved, pxPerSec };
+    return { method: 'scroll+drag', moved: totalMoved, pxPerSec };
   };
   return runPhases().then(drive => {
-    collector.stop();
-    return { frames: collector.frames, ...drive };
+    const contentUpdates = collector.stop();
+    return { frames: collector.frames, contentUpdates, ...drive };
   });
 };
 
@@ -626,6 +667,8 @@ async function main() {
     const roundStats = [];
     const roundBlanks = [];
     const roundPxs = [];
+    const roundContentUpdates = [];
+    const roundContentUpdateRates = [];
     const ltScrollAll = [];
     for (let round = 0; round < WARMUP_ROUNDS + SCROLL_ROUNDS; round++) {
       await page.evaluate(() => (window.__longTasks.length = 0));
@@ -639,8 +682,17 @@ async function main() {
       if (typeof s.pxPerSec === 'number') roundPxs.push(s.pxPerSec);
       const lt = await page.evaluate(() => window.__longTasks.slice());
       if (round >= WARMUP_ROUNDS) {
-        roundStats.push(frameStats(s.frames));
+        const fs = frameStats(s.frames);
+        roundStats.push(fs);
         ltScrollAll.push(...lt);
+        if (typeof s.contentUpdates === 'number') {
+          roundContentUpdates.push(s.contentUpdates);
+          if (fs && fs.scrollDuration > 0) {
+            roundContentUpdateRates.push(
+              s.contentUpdates / (fs.scrollDuration / 1000),
+            );
+          }
+        }
       }
     }
     const valid = roundStats.filter(Boolean);
@@ -679,8 +731,17 @@ usability.noBlank = usability.noBlank !== undefined
 // 计算功能丰富度总分（12 个维度，满分 12 分）
 const FEATURE_KEYS = ['fixed', 'rowHeight', 'hVirtual', 'width', 'filtering', 'sorting', 'editing', 'export', 'treeExpand', 'cellMerge', 'headerGroup', 'rangeSelection'];
 usability.featureScore = FEATURE_KEYS.reduce((s, k) => s + (Number(usability[k]) || 0), 0);
+    // 平滑 FPS = min(浏览器帧率, 内容更新帧率)：被 throttle 的表格内容更新少，体感帧率被拉低
+    const contentUpdateRateVal = roundContentUpdateRates.length
+      ? +median(roundContentUpdateRates).toFixed(1)
+      : null;
+    const smoothFpsVal =
+      stats && contentUpdateRateVal != null
+        ? +Math.min(stats.avgFps, contentUpdateRateVal).toFixed(1)
+        : '-';
     results.push({
       table: label,
+      url: URL_MAP[label] || '',
       renderType: RENDER_TYPE[label] || 'Vue DOM',
       version,
       renderMs,
@@ -691,6 +752,10 @@ usability.featureScore = FEATURE_KEYS.reduce((s, k) => s + (Number(usability[k])
       scrolledPx: Math.round(moved),
       pxPerSec: roundPxs.length ? Math.round(median(roundPxs)) : '-',
       blankPct: roundBlanks.length ? +median(roundBlanks).toFixed(1) : '-',
+      contentUpdates:
+        roundContentUpdates.length ? Math.round(median(roundContentUpdates)) : '-',
+      contentUpdateRate: contentUpdateRateVal ?? '-',
+      smoothFps: smoothFpsVal,
       avgFps: stats?.avgFps ?? '-',
       lowFps1pct: stats?.lowFps1pct ?? '-',
       p99FrameMs: stats?.p99FrameMs ?? '-',
@@ -704,7 +769,7 @@ usability.featureScore = FEATURE_KEYS.reduce((s, k) => s + (Number(usability[k])
     });
     const r = results[results.length - 1];
     console.log(
-      ` 渲染 ${r.renderMs}ms | 无白屏速度 ${r.pxPerSec}px/s | 平均 ${r.avgFps}fps | 1%low ${r.lowFps1pct}fps | 白屏 ${r.blankPct}%`,
+      ` 渲染 ${r.renderMs}ms | 无白屏速度 ${r.pxPerSec}px/s | 平滑 ${r.smoothFps}fps（浏览器 ${r.avgFps}fps / 内容更新 ${r.contentUpdateRate}/s）| 1%low ${r.lowFps1pct}fps`,
     );
   }
 
@@ -723,6 +788,9 @@ usability.featureScore = FEATURE_KEYS.reduce((s, k) => s + (Number(usability[k])
       '实际滚动(px)': r.scrolledPx,
       '无白屏速度(px/s)': r.pxPerSec,
       '白屏率(%)': r.blankPct,
+      内容更新次数: r.contentUpdates,
+      内容更新率: r.contentUpdateRate,
+      平滑FPS: r.smoothFps,
       平均FPS: r.avgFps,
       '1%low FPS': r.lowFps1pct,
       'p99帧(ms)': r.p99FrameMs,
