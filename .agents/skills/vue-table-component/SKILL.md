@@ -84,3 +84,6 @@ description: "在 Vue 虚拟表格性能对比项目中新增或更新一个表�
 - 竖向边框默认关闭的库（如 canvas-vue-table）须用 `bordered` 等开关开启，否则列为不支持项。
 - Web Component 类表格（如 RevoGrid）须在应用启动时（`src/vue/app.js`）全局注册一次自定义元素，避免在懒加载 chunk 内注册后被 HMR 热替换导致构造函数失效；列/数据需通过 ref 直接赋属性（而非 HTML 属性）。
 - 更新组件后必须重新运行 `npm run perf`，否则报告数据会停留在旧版本。
+- arco-design-vue 的滚动事件有节流（throttle）机制，快速滚动时内容更新跟不上，导致出现白屏帧。这是库自身行为，非 perf 脚本问题。
+- vuetify 快速滚动时也存在白屏问题，原因同上，是库自身渲染调度行为。
+- tDesign 快速滚动时也存在白屏问题，原因同上。

@@ -1,5 +1,5 @@
 <script setup>
-import { defineAsyncComponent, shallowRef } from 'vue';
+import { defineAsyncComponent, shallowRef, onMounted } from 'vue';
 
 // 每个表格一个 tab，通过 defineAsyncComponent 动态导入，切换时才加载对应 chunk
 const tabs = [
@@ -82,7 +82,29 @@ const tabs = [
   // 不属于表格组件，不加入排名；实现代码保留在 VirtualScrollerTable / VirtuaTable / VueucVirtualList.vue
 ];
 
-const activeTab = shallowRef(tabs[0]);
+function getInitialTab() {
+  const hashKey = location.hash.slice(1);
+  if (!hashKey) return tabs[0];
+  const found = tabs.find(t => t.key === hashKey);
+  return found || tabs[0];
+}
+
+const activeTab = shallowRef(getInitialTab());
+
+function switchTab(tab) {
+  activeTab.value = tab;
+  location.hash = tab.key;
+}
+
+// 监听 hashchange 支持浏览器前进后退
+onMounted(() => {
+  window.addEventListener('hashchange', () => {
+    const newTab = getInitialTab();
+    if (newTab !== activeTab.value) {
+      activeTab.value = newTab;
+    }
+  });
+});
 </script>
 
 <template>
@@ -93,7 +115,7 @@ const activeTab = shallowRef(tabs[0]);
         :key="tab.key"
         class="tab-btn"
         :class="{ active: tab === activeTab }"
-        @click="activeTab = tab"
+        @click="switchTab(tab)"
       >
         {{ tab.label }}
       </button>

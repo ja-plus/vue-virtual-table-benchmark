@@ -1,68 +1,77 @@
 const path = require('path');
 const { VueLoaderPlugin } = require('vue-loader');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
-// const BundleAnalyzer = require('webpack-bundle-analyzer').BundleAnalyzerPlugin;
-// const SpeedMeasurePlugin = require('speed-measure-webpack-plugin');
-// const smp = new SpeedMeasurePlugin();
 
-module.exports =
-  /*  smp.wrap( */
-  /** @import('webpack').Configuration */
-  {
-    stats: 'minimal',
-    entry: {
-      app: './src/app.js',
+const isDev = process.env.NODE_ENV !== 'production';
+
+module.exports = {
+  stats: 'minimal',
+  entry: {
+    app: './src/app.js',
+  },
+  // 开发环境使用更快的 cheap-module-source-map，构建使用完整的 source-map
+  devtool: isDev ? 'cheap-module-source-map' : 'source-map',
+  devServer: {
+    static: {
+      directory: path.join(__dirname, 'public'),
     },
-    devtool: 'source-map',
-    devServer: {
-      static: {
-        directory: path.join(__dirname, 'public'),
+    compress: true,
+    open: true,
+    hot: true,
+  },
+  resolve: {
+    extensions: ['...', '.json'],
+    alias: {
+      '@': path.join(__dirname, 'src'),
+    },
+  },
+  // 开发环境启用懒编译，只编译当前页面需要的模块，大幅减少首次构建时间
+  experiments: {
+    lazyCompilation: isDev ? { imports: true, entries: false } : false,
+  },
+  // 优化 tree-shaking，减少产物体积和构建时间
+  optimization: {
+    sideEffects: true,
+    usedExports: true,
+    providedExports: true,
+    innerGraph: true,
+  },
+  // 减少 node_modules 的文件监听开销
+  snapshot: {
+    managedPaths: [path.resolve(__dirname, 'node_modules')],
+  },
+  module: {
+    rules: [
+      {
+        test: /\.m?(t|j)s$/,
+        loader: 'builtin:swc-loader',
       },
-      compress: true,
-      open: true,
-    },
-    resolve: {
-      extensions: ['...', '.json'], // 解析扩展。（当我们通过路导入文件，找不到改文件时，会尝试加入这些后缀继续寻找文件）
-      alias: {
-        '@': path.join(__dirname, 'src'), // 在项目中使用@符号代替src路径，导入文件路径更方便
+      {
+        test: /\.vue$/,
+        loader: 'vue-loader',
       },
-    },
-    module: {
-      rules: [
-        {
-          test: /\.m?(t|j)s$/,
-          // exclude: /node_modules/,
-          // loader: 'ts-loader',
-          loader: 'builtin:swc-loader',
-        },
-        {
-          test: /\.vue$/,
-          loader: 'vue-loader',
-        },
-        {
-          test: /\.css$/,
-          use: ['style-loader', 'css-loader'],
-        },
-        {
-          test: /\.less$/,
-          use: ['style-loader', 'css-loader', 'less-loader'],
-        },
-      ],
-    },
-    plugins: [
-      new VueLoaderPlugin(),
-      new HtmlWebpackPlugin({
-        template: './public/index.html',
-        filename: 'index.html',
-        inject: true, // true：默认值，script标签位于html文件的 body 底部
-        hash: true, // 在打包的资源插入html会加上hash
-        minify: {
-          removeComments: true, // 去注释
-          collapseWhitespace: true, // 压缩空格
-          removeAttributeQuotes: true, // 去除属性 标签的 引号  例如 <p id="test" /> 输出 <p id=test/>
-        },
-      }),
-      // new BundleAnalyzer(),
+      {
+        test: /\.css$/,
+        use: ['style-loader', 'css-loader'],
+      },
+      {
+        test: /\.less$/,
+        use: ['style-loader', 'css-loader', 'less-loader'],
+      },
     ],
-  };
-/* ); */
+  },
+  plugins: [
+    new VueLoaderPlugin(),
+    new HtmlWebpackPlugin({
+      template: './public/index.html',
+      filename: 'index.html',
+      inject: true,
+      hash: true,
+      minify: {
+        removeComments: true,
+        collapseWhitespace: true,
+        removeAttributeQuotes: true,
+      },
+    }),
+  ],
+};

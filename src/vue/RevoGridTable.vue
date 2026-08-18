@@ -25,11 +25,15 @@ const columns = tableColumns.map(it => ({
 
 // Web Component 集成：columns/source 需作为属性（而非 HTML 属性）传入，
 // 因此在 onMounted 中通过 ref 直接赋值，避免 Vue 把对象当字符串属性处理。
+// 使用 requestAnimationFrame 延迟设置，确保 Web Component 的 connectedCallback 已执行，
+// 避免 localScrollService 未初始化导致的 setParams 错误。
 const gridRef = ref(null);
 onMounted(() => {
   const grid = gridRef.value;
   if (!grid) return;
-  grid.columns = columns;
-  grid.source = tableData;
+  requestAnimationFrame(() => {
+    grid.columns = columns;
+    grid.source = tableData;
+  });
 });
 </script>

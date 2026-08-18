@@ -94,6 +94,9 @@
   th, td { border: 1px solid #eee; padding: 7px 10px; text-align: right; white-space: nowrap; }
   th { background: #fafafa; font-weight: 600; }
   th:first-child, td:first-child { text-align: left; }
+  tr:hover td { background: #e6f7ff; transition: background 0.15s; }
+  tr:hover td.best { background: #d9f5dc; }
+  tr:hover td.worst { background: #ffe7e3; }
   td.best { color: #389e0d; font-weight: bold; background: #f6ffed; }
   td.worst { color: #cf1322; background: #fff1f0; }
   .table-scroll { overflow-x: auto; }
@@ -165,7 +168,8 @@
       判定口径：列固定 = 是否支持左右固定列（TDesign 左右固定互斥计部分）；
       行高控制 = 是否原生支持设置行高（经 CSS 压缩实现计部分，如 surely-vue / naive-ui / tdesign / primevue）；
       横向虚拟列表 = 列级虚拟化，横向滚动只渲染可见列（整行渲染、仅容器横向滚动计不支持；库原生支持但当前版本缺陷未启用计部分支持，如 naive-ui 2.44.1 的 virtual-scroll-x 固定列错位）；
-      宽度控制 = 容器宽度自适应铺满（element TableV2 需 ResizeObserver 动态控制计部分）。
+      宽度控制 = 容器宽度自适应铺满（element TableV2 需 ResizeObserver 动态控制计部分）；
+      滚动无白屏 = 内容跟随驱动下快速滚动全程不出现白屏。
       ✓ 支持　△ 部分　✕ 不支持。
     </div>
   </div>
@@ -187,10 +191,10 @@
     <table id="dataTable"></table>
     <div class="note">
       绿色 = 该列最优，红色 = 该列最差。渲染耗时 = 点击 Tab → DOM 稳定（含异步 chunk 加载）；
+      DOM 节点数 = 表格渲染稳定时的 DOM 元素总数，越低说明虚拟化越彻底；
       无白屏速度 = 内容跟随驱动下表格保持视口内容完整所能达到的滚动速度，是滚动性能的核心指标；
-      掉帧数 = 帧耗时 &gt; 33.4ms 的帧数量；scroll = 无白屏内容跟随驱动，wheel = 合成滚轮事件（canvas 类表格）；
-      白屏率 = 滚动中视口内容缺失帧占比（内容跟随时序下应接近 0，非零值供校验）；
-      实际滚动(px) 为会话中达到的最大 scrollTop，wheel 方式记为 -1。
+      掉帧数 = 帧耗时 &gt; 33.4ms 的帧数量；scroll = 无白屏内容跟随驱动，wheel = 合成滚轮事件（canvas 渲染表格如 VTable、canvas-vue-table）；
+      实际滚动(px) 为会话中达到的最大 scrollTop，wheel 方式记为 0。
     </div>
   </div>
 
@@ -225,13 +229,21 @@
     { key: 'avgFps', name: '平均FPS', lower: false },
     { key: 'lowFps1pct', name: '1%low FPS', lower: false },
     { key: 'droppedFrames', name: '掉帧控制', lower: true },
-    { key: 'scrollLongTaskMs', name: '滚动流畅', lower: true },
+    { key: 'easeOfUse.score', name: '易用性', lower: false },
   ];
+
+  // 支持 'a.b.c' 形式的嵌套取值（如 easeOfUse.score）
+  function dimValue(d, key) {
+    var p = key.split('.');
+    var v = d;
+    for (var i = 0; i < p.length; i++) v = v ? v[p[i]] : undefined;
+    return Number(v) || 0;
+  }
 
   // 各维度归一化得分（10~100，越高越好）
   var scoreTable = DATA.map(function () { return []; });
   DIMS.forEach(function (dim, di) {
-    var vals = DATA.map(function (d) { return Number(d[dim.key]) || 0; });
+    var vals = DATA.map(function (d) { return dimValue(d, dim.key); });
     var min = Math.min.apply(null, vals);
     var max = Math.max.apply(null, vals);
     vals.forEach(function (v, i) {
@@ -243,7 +255,7 @@
   // 各维度排名（1 = 最优，并列取相同排名）
   var rankTable = DATA.map(function () { return []; });
   DIMS.forEach(function (dim, di) {
-    var vals = DATA.map(function (d) { return Number(d[dim.key]) || 0; });
+    var vals = DATA.map(function (d) { return dimValue(d, dim.key); });
     vals.forEach(function (v, i) {
       var better = vals.filter(function (o) { return dim.lower ? o < v : o > v; }).length;
       rankTable[i][di] = better + 1;
@@ -355,6 +367,7 @@
     { key: 'rowHeight', name: '行高控制' },
     { key: 'hVirtual', name: '横向虚拟列表' },
     { key: 'width', name: '宽度控制' },
+    { key: 'noBlank', name: '滚动无白屏' },
   ];
   function mark(v) {
     if (v === 1) return '<span class="mark-ok">✓ 支持</span>';
@@ -382,10 +395,10 @@
   }).join('');
   var fullOk = DATA.filter(function (d) {
     var u = d.usability || {};
-    return u.fixed === 1 && u.rowHeight === 1 && u.hVirtual === 1 && u.width === 1;
+    return u.fixed === 1 && u.rowHeight === 1 && u.hVirtual === 1 && u.width === 1 && u.noBlank === 1;
   }).length;
   statsHtml +=
-    '<div class="u-stat"><div class="u-name">四项全部支持</div>' +
+    '<div class="u-stat"><div class="u-name">五维全部达标</div>' +
     '<div class="u-num"><span class="u-total">' + fullOk + '/' + DATA.length + '</span></div></div>';
   document.getElementById('usabilityStats').innerHTML = statsHtml;
 
@@ -404,7 +417,7 @@
       return (
         '<tr><td>' + r.name + '</td>' +
         FEATURES.map(function (f) { return '<td>' + mark(r.u[f.key]) + '</td>'; }).join('') +
-        '<td class="u-score">' + r.score + '/4</td></tr>'
+        '<td class="u-score">' + r.score + '/5</td></tr>'
       );
     })
     .join('');
@@ -441,13 +454,14 @@
   // ---------------- 明细表 ----------------
   var TABLE_COLS = [
     { key: 'table', name: '表格' },
+    { key: 'renderType', name: '渲染方式' },
     { key: 'renderMs', name: '渲染耗时(ms)', lower: true },
     { key: 'firstPaintMs', name: '首次出现(ms)', lower: true },
     { key: 'renderLongTaskMs', name: '渲染长任务(ms)', lower: true },
+    { key: 'domNodes', name: 'DOM节点数', lower: true },
     { key: 'scrollMethod', name: '滚动方式' },
     { key: 'scrolledPx', name: '实际滚动(px)' },
     { key: 'pxPerSec', name: '无白屏速度(px/s)', lower: false },
-    { key: 'blankPct', name: '白屏率(%)', lower: true },
     { key: 'avgFps', name: '平均FPS', lower: false },
     { key: 'lowFps1pct', name: '1%low FPS', lower: false },
     { key: 'p99FrameMs', name: 'p99帧(ms)', lower: true },
@@ -457,25 +471,23 @@
     { key: 'heapDeltaMB', name: '堆增量(MB)' },
   ];
   var tableEl = document.getElementById('dataTable');
-  // 每列最优/最差（需在生成行之前计算）
-  var bestIdx = {};
-  var worstIdx = {};
+  // 每列最优/最差值（需在生成行之前计算），相同数值全部标记
+  var bestVal = {};
+  var worstVal = {};
   TABLE_COLS.forEach(function (c) {
     if (typeof c.lower !== 'boolean') return;
     var vals = DATA.map(function (d) { return Number(d[c.key]) || 0; });
-    var best = c.lower ? Math.min.apply(null, vals) : Math.max.apply(null, vals);
-    var worst = c.lower ? Math.max.apply(null, vals) : Math.min.apply(null, vals);
-    bestIdx[c.key] = vals.indexOf(best);
-    worstIdx[c.key] = vals.indexOf(worst);
+    bestVal[c.key] = c.lower ? Math.min.apply(null, vals) : Math.max.apply(null, vals);
+    worstVal[c.key] = c.lower ? Math.max.apply(null, vals) : Math.min.apply(null, vals);
   });
   var thead = '<tr>' + TABLE_COLS.map(function (c) { return '<th>' + c.name + '</th>'; }).join('') + '</tr>';
   var tbody = DATA.map(function (row, i) {
     return '<tr>' + TABLE_COLS.map(function (c) {
-      var v = row[c.key];
+      var v = Number(row[c.key]) || 0;
       var cls = '';
-      if (typeof c.lower === 'boolean' && bestIdx[c.key] === i) cls = 'best';
-      if (typeof c.lower === 'boolean' && worstIdx[c.key] === i) cls = 'worst';
-      return '<td class="' + cls + '">' + v + '</td>';
+      if (typeof c.lower === 'boolean' && v === bestVal[c.key]) cls = 'best';
+      if (typeof c.lower === 'boolean' && v === worstVal[c.key]) cls = 'worst';
+      return '<td class="' + cls + '">' + row[c.key] + '</td>';
     }).join('') + '</tr>';
   }).join('');
   tableEl.innerHTML = thead + tbody;
@@ -484,6 +496,7 @@
   var CHARTS = [
     { key: 'renderMs', name: '渲染耗时', unit: 'ms', lower: true },
     { key: 'firstPaintMs', name: '首次出现', unit: 'ms', lower: true },
+    { key: 'domNodes', name: 'DOM节点数', unit: '个', lower: true },
     { key: 'renderLongTaskMs', name: '渲染长任务阻塞', unit: 'ms', lower: true },
     { key: 'pxPerSec', name: '无白屏滚动速度', unit: 'px/s', lower: false },
     { key: 'avgFps', name: '滚动平均 FPS', unit: 'fps', lower: false },

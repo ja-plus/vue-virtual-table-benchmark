@@ -25,11 +25,11 @@ const PORT = 8091;
 const REPORT_PORT = 8093; // 报告服务端口
 const BASE_URL = `http://127.0.0.1:${PORT}/`;
 
-const SCROLL_DURATION = 12000; // 单次滚动会话超时上限（ms），慢表格超时时以实际进度计算吞吐量
-const MAX_SCROLL_PX = 6000; // 单方向滚动距离上限（px），足够反复穿越虚拟滚动窗口
+const SCROLL_DURATION = 5000; // 单次滚动会话超时上限（ms），慢表格超时时以实际进度计算吞吐量
+const MAX_SCROLL_PX = 50000; // 单方向滚动距离上限（px），canvas-vue-table 10000 行数据约 390000px
 const SCROLL_ROUNDS = 2; // 正式测量轮数，取各指标中位数降低抖动
 const WARMUP_ROUNDS = 1; // 预热轮数（结果丢弃，消除 JIT 冷启动偏差）
-const RENDER_TIMEOUT = 30000; // 渲染稳定等待超时（ms）
+const RENDER_TIMEOUT = 10000; // 渲染稳定等待超时（ms）
 
 // 表格 label → npm 包名（用于读取实际安装版本，显示在报告标题中）
 const PACKAGE_OF = {
@@ -58,43 +58,102 @@ const PACKAGE_OF = {
 //   width     = 宽度控制（容器宽度自适应铺满；需外部 ResizeObserver 等 JS 动态控制计 0.5）
 // 依据：各组件模板顶部 ul > li 标注及组件实际配置（virtual-x / fixed / rowHeight 等）
 const USABILITY = {
-  'stk-table-vue': { fixed: 1, rowHeight: 1, hVirtual: 1, width: 1 },
-  'vxe-table': { fixed: 1, rowHeight: 1, hVirtual: 1, width: 1 },
-  'naive-ui': { fixed: 1, rowHeight: 0.5, hVirtual: 0.5, width: 1 },
-  'element-plus': { fixed: 1, rowHeight: 1, hVirtual: 0, width: 0.5 },
-  'arco-design': { fixed: 0, rowHeight: 0, hVirtual: 0, width: 1 },
-  tdesign: { fixed: 0.5, rowHeight: 0.5, hVirtual: 0, width: 1 },
-  'ant-design-vue(surely-vue)': { fixed: 1, rowHeight: 0.5, hVirtual: 1, width: 1 },
-  vuetify: { fixed: 0, rowHeight: 1, hVirtual: 0, width: 1 },
-  primevue: { fixed: 1, rowHeight: 0.5, hVirtual: 0, width: 1 },
-  'v-table': { fixed: 1, rowHeight: 1, hVirtual: 1, width: 1 },
-  'ag-grid': { fixed: 1, rowHeight: 1, hVirtual: 1, width: 1 },
-  'tanstack-virtual': { fixed: 0, rowHeight: 1, hVirtual: 0, width: 1 },
-  revogrid: { fixed: 1, rowHeight: 1, hVirtual: 1, width: 1 },
-  'canvas-vue-table': { fixed: 1, rowHeight: 0, hVirtual: 0, width: 1 },
-  'simple-table': { fixed: 1, rowHeight: 1, hVirtual: 1, width: 1 },
+  'stk-table-vue': { fixed: 1, rowHeight: 1, hVirtual: 1, width: 1, noBlank: 1 },
+  'vxe-table': { fixed: 1, rowHeight: 1, hVirtual: 1, width: 1, noBlank: 1 },
+  'naive-ui': { fixed: 1, rowHeight: 0.5, hVirtual: 0.5, width: 1, noBlank: 1 },
+  'element-plus': { fixed: 1, rowHeight: 1, hVirtual: 0, width: 0.5, noBlank: 1 },
+  'arco-design': { fixed: 0, rowHeight: 0, hVirtual: 0, width: 1, noBlank: 0 },
+  tdesign: { fixed: 0.5, rowHeight: 0.5, hVirtual: 0, width: 1, noBlank: 0 },
+  'ant-design-vue(surely-vue)': {
+    fixed: 1,
+    rowHeight: 0.5,
+    hVirtual: 0.5,
+    width: 1,
+    noBlank: 1,
+  },
+  vuetify: { fixed: 0, rowHeight: 1, hVirtual: 0, width: 1, noBlank: 0 },
+  primevue: { fixed: 1, rowHeight: 0.5, hVirtual: 0, width: 1, noBlank: 0 },
+  'v-table': { fixed: 1, rowHeight: 1, hVirtual: 1, width: 1, noBlank: 1 },
+  'ag-grid': { fixed: 1, rowHeight: 1, hVirtual: 1, width: 1, noBlank: 1 },
+  'tanstack-virtual': { fixed: 0, rowHeight: 1, hVirtual: 0, width: 1, noBlank: 0 },
+  revogrid: { fixed: 1, rowHeight: 1, hVirtual: 1, width: 1, noBlank: 1 },
+  'canvas-vue-table': { fixed: 1, rowHeight: 0, hVirtual: 0, width: 1, noBlank: 1 },
+  'simple-table': { fixed: 1, rowHeight: 1, hVirtual: 1, width: 1, noBlank: 0 },
   // 注：vue-virtual-scroller / virtua / vueuc(VirtualList) 为通用虚拟列表，不属于表格组件，
   // 已从应用移除、不参与测试与排名（代码保留于 src/vue/ 下）
 };
 
 // 易用性主观评分（5 分制，0.5 分档）：作者在接入本项目（10000 行 × 40 列、左右固定列、横纵虚拟滚动）
 // 过程中的主观体验评价，评估维度：配置复杂度 / 文档质量 / 类型提示与 API 设计 / 开箱即用程度
+// 渲染方式分类：
+//   Vue DOM = Vue 组件，DOM 渲染单元格
+//   Canvas = Canvas 直接绘制（无 DOM 单元格）
+//   Web Component = 基于 Web Component 原生标准
+//   JS DOM = 纯 JavaScript 虚拟滚动封装，表格 UI 需自行实现
+const RENDER_TYPE = {
+  'stk-table-vue': 'Vue DOM',
+  'vxe-table': 'Vue DOM',
+  'naive-ui': 'Vue DOM',
+  'element-plus': 'Vue DOM',
+  'arco-design': 'Vue DOM',
+  tdesign: 'Vue DOM',
+  'ant-design-vue(surely-vue)': 'Vue DOM',
+  vuetify: 'Vue DOM',
+  primevue: 'Vue DOM',
+  'v-table': 'Canvas',
+  'ag-grid': 'JS DOM',
+  'tanstack-virtual': 'JS DOM',
+  revogrid: 'Web Component',
+  'canvas-vue-table': 'Canvas',
+  'simple-table': 'Vue DOM',
+};
+
 const EASE_OF_USE = {
-  'stk-table-vue': { score: 4.5, note: '配置简洁、API 直观，文档完善，开箱即用' },
+  'stk-table-vue': {
+    score: 4.5,
+    note: '配置简洁、API 直观，文档完善，开箱即用',
+  },
   'vxe-table': { score: 3, note: '功能全面但配置项繁多，文档庞大，学习成本高' },
   'naive-ui': { score: 4.5, note: '类型提示完善、文档清晰，虚拟表格开箱即用' },
-  'element-plus': { score: 4, note: '中文文档完善、生态成熟，TableV2 部分能力需自行封装' },
-  'arco-design': { score: 3.5, note: 'API 简洁、文档清晰，但大数据场景能力薄弱' },
+  'element-plus': {
+    score: 4,
+    note: '中文文档完善、生态成熟，TableV2 部分能力需自行封装',
+  },
+  'arco-design': {
+    score: 3.5,
+    note: 'API 简洁、文档清晰，但大数据场景能力薄弱',
+  },
   tdesign: { score: 3, note: '上手简单但文档细节一般，虚拟滚动配置需自行探索' },
-  'ant-design-vue(surely-vue)': { score: 3, note: '继承 antd 配置体系，文档较少，hVirtual 启用需摸索' },
-  vuetify: { score: 3.5, note: '文档完善、风格规范统一，虚拟表格 API 版本间变动大' },
+  'ant-design-vue(surely-vue)': {
+    score: 3,
+    note: '继承 antd 配置体系，文档较少，hVirtual 启用需摸索',
+  },
+  vuetify: {
+    score: 3.5,
+    note: '文档完善、风格规范统一，虚拟表格 API 版本间变动大',
+  },
   primevue: { score: 3, note: '文档丰富但 v4 主题体系需额外配置，上手易踩坑' },
   'v-table': { score: 3, note: 'canvas 渲染模型特殊，配置模型学习成本较高' },
-  'ag-grid': { score: 3.5, note: '文档与示例完善、功能强大，但概念较多且社区版有功能限制' },
-  'tanstack-virtual': { score: 3, note: 'headless API 简洁，但 UI、固定列、表头全需手写' },
-  revogrid: { score: 3.5, note: 'Web Component 零配置即可用、性能强悍，但 Vue 集成需 loader 注册，文档偏底层' },
-  'canvas-vue-table': { score: 2.5, note: 'API 简洁，但生态极小、文档少；行高硬编码最小39px无法压至28px，横向非逐列虚拟化' },
-  'simple-table': { score: 3.5, note: 'API 现代、双虚拟开箱即用，但 Community 授权非开源可商用，需付费' },
+  'ag-grid': {
+    score: 3.5,
+    note: '文档与示例完善、功能强大，但概念较多且社区版有功能限制',
+  },
+  'tanstack-virtual': {
+    score: 3,
+    note: 'headless API 简洁，但 UI、固定列、表头全需手写',
+  },
+  revogrid: {
+    score: 3.5,
+    note: 'Web Component 零配置即可用、性能强悍，但 Vue 集成需 loader 注册，文档偏底层',
+  },
+  'canvas-vue-table': {
+    score: 2.5,
+    note: 'API 简洁，但生态极小、文档少；行高硬编码最小39px无法压至28px，横向非逐列虚拟化',
+  },
+  'simple-table': {
+    score: 3.5,
+    note: 'API 现代、双虚拟开箱即用，但 Community 授权非开源可商用，需付费',
+  },
 };
 
 // 读取组件库实际安装版本（读不到时返回空串）
@@ -102,7 +161,12 @@ async function versionOf(label) {
   const pkg = PACKAGE_OF[label];
   if (!pkg) return '';
   try {
-    const pkgJson = JSON.parse(await readFile(path.join(ROOT, 'node_modules', pkg, 'package.json'), 'utf-8'));
+    const pkgJson = JSON.parse(
+      await readFile(
+        path.join(ROOT, 'node_modules', pkg, 'package.json'),
+        'utf-8',
+      ),
+    );
     return pkgJson.version || '';
   } catch {
     return '';
@@ -136,14 +200,20 @@ const MIME = {
 async function startStaticServer() {
   const server = createServer(async (req, res) => {
     try {
-      let filePath = path.join(DIST, decodeURIComponent(new URL(req.url, BASE_URL).pathname));
+      let filePath = path.join(
+        DIST,
+        decodeURIComponent(new URL(req.url, BASE_URL).pathname),
+      );
       try {
         await readFile(filePath);
       } catch {
         filePath = path.join(DIST, 'index.html');
       }
       const data = await readFile(filePath);
-      res.setHeader('Content-Type', MIME[path.extname(filePath)] || 'application/octet-stream');
+      res.setHeader(
+        'Content-Type',
+        MIME[path.extname(filePath)] || 'application/octet-stream',
+      );
       res.end(data);
     } catch (e) {
       res.statusCode = 500;
@@ -177,13 +247,19 @@ const waitRenderStable = async timeoutMs => {
   let stableCount = 0;
   let firstPaint = 0;
   while (performance.now() - start < timeoutMs) {
-    const panel = document.querySelector('.tab-panel')?.parentElement || document.body;
+    const panel =
+      document.querySelector('.tab-panel')?.parentElement || document.body;
     const n = panel.querySelectorAll('*').length;
     if (n > 0 && firstPaint === 0) firstPaint = performance.now() - start;
     if (n > 0 && n === prev) {
       stableCount++;
       if (stableCount >= 4) {
-        return { ms: performance.now() - start, firstPaint, nodes: n, timeout: false };
+        return {
+          ms: performance.now() - start,
+          firstPaint,
+          nodes: n,
+          timeout: false,
+        };
       }
     } else {
       stableCount = 0;
@@ -191,14 +267,20 @@ const waitRenderStable = async timeoutMs => {
     prev = n;
     await new Promise(r => setTimeout(r, 50));
   }
-  return { ms: performance.now() - start, firstPaint, nodes: prev, timeout: true };
+  return {
+    ms: performance.now() - start,
+    firstPaint,
+    nodes: prev,
+    timeout: true,
+  };
 };
 
-// 滚动会话：无白屏内容跟随驱动——仅当视口内容渲染就绪才推进下一步，全程不出现白屏
-// 核心指标 = 无白屏滚动速度（px/s）：表格保持内容可见的前提下能滚多快，慢表格自动得低分
-// FPS/1%low 为各自极限速度下的伴随指标；canvas 类表格（如 VTable）没有可滚动 DOM，退化为 wheel 事件驱动
+// 滚动会话：拆分为三种滚动方式，每种都是“向下滚动一段距离后再回到原位”
+// 阶段 1：wheel 事件驱动，步长适中；阶段 2：scrollTop 每帧一页；阶段 3：500ms 超快拖动到底再回顶
+// 核心指标 = 合并三种方式的 FPS/1%low/掉帧数；实际滚动距离为各阶段绝对位移之和
+// canvas 类表格（如 VTable）没有可滚动 DOM，退化为 wheel 事件驱动
 const runScrollSession = args => {
-  const { timeoutMs, maxScrollPx } = args;
+  const { maxScrollPx } = args;
   // 帧采集：外部通过 stop() 结束（page.evaluate 序列化函数须自包含，故定义在内部）
   const startCollect = () => {
     const frames = [];
@@ -216,16 +298,32 @@ const runScrollSession = args => {
 
   const getPanelRoot = () =>
     document.querySelector('.tab-panel')?.parentElement || document.body;
-  // 通用滚动容器查找：overflow 可滚动且 scrollHeight 超出可视高度的最大元素
+
+  // 通用滚动容器查找：先匹配已知选择器，fallback 到 overflow 可滚动且 scrollHeight 超出可视高度的最大元素
   const findScrollContainer = () => {
+    // 已知表格库的滚动容器选择器，按优先级排列
+    const SCROLL_SELECTORS = [
+      '.el-table-v2__main .el-vl__wrapper > div', // element TableV2
+      '.stk-table', // stk-table-vue
+      '.cvt', // canvas-vue-table
+      '.vxe-table--scroll-y-handle', // vxe-table
+      '.n-data-table-base-table-body>.v-vl', // naive-ui
+      'el-table-v2__main>.el-vl__wrapper>div', // element TableV2
+      '.t-table__content', // tdesign
+      '.surely-table-vertical-scroll-viewport', // surely-vue
+      '.v-table .v-table__wrapper', // vuetify
+      '.p-datatable-table-container .p-virtualscroller', // primevue
+      '.ag-body-vertical-scroll-viewport', // ag-grid
+      '.tv-body', // tanstack-virtual
+      'revogr-scroll-virtual', // revogrid
+      '.st-body-container', // simple-table
+    ];
     const panel = getPanelRoot();
     if (!panel) return null;
-    // 特例 1：element TableV2 窗口化滚动，主体滚动器是 .el-table-v2__main 内无类名 div（overflow:hidden + 大 scrollHeight）
-    const elvl = panel.querySelector('.el-table-v2__main .el-vl__wrapper > div');
-    if (elvl && elvl.scrollHeight > elvl.clientHeight) return elvl;
-    // 特例 2：stk-table 根容器 overflow:hidden + 内部 spacer，transform 平移视口，直接操作根元素 scrollTop
-    const stkBody = panel.querySelector('.stk-table');
-    if (stkBody && stkBody.scrollHeight > stkBody.clientHeight) return stkBody;
+    for (const sel of SCROLL_SELECTORS) {
+      const el = panel.querySelector(sel);
+      if (el && el.scrollHeight > el.clientHeight) return el;
+    }
     const cands = [];
     for (const el of panel.querySelectorAll('*')) {
       const s = getComputedStyle(el);
@@ -236,129 +334,39 @@ const runScrollSession = args => {
       cands.push(el);
     }
     if (!cands.length) return null;
-    cands.sort((a, b) => b.scrollHeight - b.clientHeight - (a.scrollHeight - a.clientHeight));
+    cands.sort(
+      (a, b) =>
+        b.scrollHeight - b.clientHeight - (a.scrollHeight - a.clientHeight),
+    );
     return cands[0];
   };
 
-  const el = findScrollContainer();
   const panel = getPanelRoot();
 
-  // 视口内是否已有真实行内容（白屏检测：可见行覆盖 ≥60% 且视口内行有真实文本）
-  // 虚拟表格复用行时元素先占位、内容后填充，仅查覆盖会误判
-  // 文本校验在 panel 范围扫描：vxe/element 的固定列渲染在滚动容器外的独立层，只查容器内会永远误判为白屏
-  const ROW_SEL =
-    'tr, [class*="row"], [class*="Row"], [class*="item"], [class*="Item"], [class*="cell-group"]';
-  const contentReady = () => {
-    const er = el.getBoundingClientRect();
-    let cover = 0;
-    for (const r of el.querySelectorAll(ROW_SEL)) {
-      const b = r.getBoundingClientRect();
-      if (b.height < 5 || b.width < 50) continue;
-      const top = Math.max(b.top, er.top);
-      const bot = Math.min(b.bottom, er.bottom);
-      if (bot - top <= 0) continue;
-      cover += bot - top;
-      if (cover >= er.height * 0.6) break;
-    }
-    if (cover < er.height * 0.6) return false;
-    for (const r of panel.querySelectorAll(ROW_SEL)) {
-      const b = r.getBoundingClientRect();
-      if (b.bottom < er.top || b.top > er.bottom) continue;
-      if (b.right < er.left || b.left > er.right) continue;
-      if (r.textContent.trim()) return true;
-    }
-    return false;
-  };
+  // canvas 表格（canvas-vue-table）直接操作 .cvt 容器的 scrollTop
+  // 因为 canvas-vue-table 阻止了默认的 wheel 行为，wheel 事件不会导致滚动
+  const el = findScrollContainer();
 
-  const driveScroll = ({ timeoutMs: timeout }) =>
+  // 滚动会话拆分为三个子阶段，每个阶段都是“向下滚动一段距离后再回到原位”。
+  // 阶段 1：wheel 事件驱动，步长取适中值（约 0.45 视口高度，限制在 150~500px）。
+  // 阶段 2：scrollTop 驱动，每帧滚动一页（视口高度）。
+  // 阶段 3：模拟超快拖动滚动条，500ms 内从顶部滚到底部，再快速回顶。
+  const phaseWheel = () =>
     new Promise(resolve => {
-      if (!el) return resolve({ method: 'none', moved: 0, pxPerSec: 0, blankPct: 0 });
-      const max = Math.min(el.scrollHeight - el.clientHeight, maxScrollPx);
-      if (max <= 0) return resolve({ method: 'no-scroll', moved: 0, pxPerSec: 0, blankPct: 0 });
-      el.scrollTop = 0;
-      const viewH = el.clientHeight || 600;
-      // 按整页（视口高度）滚动：贴近手动翻页节奏，对渲染能力是更强的压力测试
-      const stepPx = Math.round(viewH);
-      const deadline = performance.now() + timeout;
-      const t0 = performance.now();
-      let dist = 0;
-      let timedOut = false;
-      // 白屏采样：理论上内容跟随永不为空，非零值说明提交瞬间缓冲不足或检测抖动
-      let blankFrames = 0;
-      let totalFrames = 0;
-      let readyHits = 0;
-      let blank = false;
-      let stuckFrames = 0;
-      const sample = () => {
-        if (dist >= max) return;
-        totalFrames++;
-        if (contentReady()) {
-          if (++readyHits >= 2) blank = false;
-        } else {
-          readyHits = 0;
-          blank = true;
-        }
-        if (blank && totalFrames > 5) blankFrames++;
-        requestAnimationFrame(sample);
-      };
-      const finish = () => {
-        const dt = (performance.now() - t0) / 1000;
-        return resolve({
-          method: 'scroll',
-          moved: Math.round(dist),
-          timeout: timedOut,
-          pxPerSec: dt > 0.2 ? Math.round(dist / dt) : 0,
-          blankPct: totalFrames ? +((blankFrames / totalFrames) * 100).toFixed(1) : 0,
-        });
-      };
-      const commit = () => {
-        dist = Math.min(dist + stepPx, max);
-        el.scrollTop = dist;
-        // 容器拒绝滚动（scrollTop 始终上不去）时判为无效，避免空转满超时
-        if (el.scrollTop < 5 && dist < max && ++stuckFrames > 30) {
-          return resolve({ method: 'no-scroll', moved: 0, pxPerSec: 0, blankPct: 0 });
-        }
-        requestAnimationFrame(step);
-      };
-      const step = () => {
-        if (dist >= max) return finish();
-        if (performance.now() > deadline) {
-          timedOut = true;
-          return finish();
-        }
-        // 内容就绪门控：连续 2 帧确认可见内容完整才提交下一步，保证全程无白屏
-        const w0 = performance.now();
-        let hits = 0;
-        const poll = () => {
-          if (performance.now() > deadline) {
-            timedOut = true;
-            return finish();
-          }
-          if (contentReady()) {
-            if (++hits >= 2) return commit();
-          } else {
-            hits = 0;
-            // 兜底：长时间不就绪（如检测误判）仍放行，避免卡死；此路径会产生白屏帧并被采样计入
-            if (performance.now() - w0 > 300) return commit();
-          }
-          requestAnimationFrame(poll);
-        };
-        poll();
-      };
-      requestAnimationFrame(sample);
-      requestAnimationFrame(step);
-    });
-
-  const driveWheel = () =>
-    new Promise(resolve => {
-      // canvas 表格无可滚动 DOM：高频 wheel 模拟手动快速翻页（每帧一次、每次一整页），
-      // canvas 重绘是同步的，不存在白屏，无需节流，压力贴近手动拖动的真实体感
-      const target = panel.querySelector('canvas') || panel;
+      // canvas 表格无可滚动 DOM：wheel 事件发送给画布/容器；DOM 表格发给滚动容器
+      const target =
+        el || panel.querySelector('.cvt') || panel.querySelector('canvas') || panel;
       const r = target.getBoundingClientRect();
-      const stepY = Math.max(400, r.height);
-      const duration = timeoutMs;
+      const viewH = el ? el.clientHeight || 600 : r.height;
+      const stepY = el
+        ? Math.min(500, Math.max(150, Math.round(viewH * 0.45)))
+        : Math.max(400, r.height);
+      const duration = 800; // 总时长控制较短，约一半时间下行、一半上行
       const start = performance.now();
       let down = true;
+      let moved = 0;
+      let lastTop = el ? el.scrollTop : 0;
+
       const fire = dir => {
         target.dispatchEvent(
           new WheelEvent('wheel', {
@@ -370,18 +378,116 @@ const runScrollSession = args => {
           }),
         );
       };
+
       const tick = () => {
         const now = performance.now();
-        if (now - start > duration) return resolve({ method: 'wheel', moved: -1 });
+        if (now - start > duration) {
+          // canvas 表格沿用原语义：标记为 -1，表示无法从 DOM 读取实际滚动距离
+          return resolve(
+            el ? { method: 'wheel', moved } : { method: 'wheel', moved: -1 },
+          );
+        }
         if (now - start > duration / 2) down = false;
         fire(down ? 1 : -1);
+        if (el) {
+          const top = el.scrollTop;
+          moved += Math.abs(top - lastTop);
+          lastTop = top;
+        }
         requestAnimationFrame(tick);
       };
       requestAnimationFrame(tick);
     });
 
+  const phaseScrollPage = () =>
+    new Promise(resolve => {
+      if (!el) return resolve({ method: 'scroll', moved: 0 });
+      const max = Math.min(el.scrollHeight - el.clientHeight, maxScrollPx);
+      if (max <= 0) return resolve({ method: 'no-scroll', moved: 0 });
+      el.scrollTop = 0;
+      const viewH = el.clientHeight || 600;
+      const stepPx = Math.round(viewH);
+      const pagesPerDirection = 4;
+      let dist = 0;
+      let prevTop = 0;
+      let moved = 0;
+      let frame = 0;
+      const totalFrames = pagesPerDirection * 2;
+
+      const step = () => {
+        if (frame >= totalFrames) {
+          return resolve({ method: 'scroll', moved });
+        }
+        const goingDown = frame < pagesPerDirection;
+        if (goingDown) {
+          dist = Math.min(dist + stepPx, max);
+        } else {
+          dist = Math.max(dist - stepPx, 0);
+        }
+        el.scrollTop = dist;
+        const top = el.scrollTop;
+        moved += Math.abs(top - prevTop);
+        prevTop = top;
+        frame++;
+        requestAnimationFrame(step);
+      };
+      requestAnimationFrame(step);
+    });
+
+  const phaseDrag = () =>
+    new Promise(resolve => {
+      if (!el) return resolve({ method: 'drag', moved: 0 });
+      const max = Math.min(el.scrollHeight - el.clientHeight, maxScrollPx);
+      if (max <= 0) return resolve({ method: 'no-scroll', moved: 0 });
+      el.scrollTop = 0;
+      const downDuration = 500;
+      const upDuration = 300;
+      const start = performance.now();
+      let prevTop = 0;
+      let moved = 0;
+
+      const animate = () => {
+        const now = performance.now();
+        const downT = Math.min((now - start) / downDuration, 1);
+        if (downT < 1) {
+          el.scrollTop = Math.round(max * downT);
+          const top = el.scrollTop;
+          moved += Math.abs(top - prevTop);
+          prevTop = top;
+          return requestAnimationFrame(animate);
+        }
+        const upT = Math.min((now - (start + downDuration)) / upDuration, 1);
+        if (upT < 1) {
+          el.scrollTop = Math.round(max * (1 - upT));
+          const top = el.scrollTop;
+          moved += Math.abs(top - prevTop);
+          prevTop = top;
+          return requestAnimationFrame(animate);
+        }
+        resolve({ method: 'drag', moved });
+      };
+      requestAnimationFrame(animate);
+    });
+
   const collector = startCollect();
-  return (el ? driveScroll(args) : driveWheel()).then(drive => {
+  const runPhases = async () => {
+    if (!el) {
+      // canvas 表格只有一种驱动方式，执行两次 wheel 以匹配“每个阶段两次”
+      await phaseWheel();
+      return phaseWheel();
+    }
+    const t0 = performance.now();
+    // 每个阶段执行两次
+    const wheelResults = [await phaseWheel(), await phaseWheel()];
+    const scrollResults = [await phaseScrollPage(), await phaseScrollPage()];
+    const dragResults = [await phaseDrag(), await phaseDrag()];
+    const dt = (performance.now() - t0) / 1000;
+    const totalMoved = [...wheelResults, ...scrollResults, ...dragResults]
+      .reduce((sum, r) => sum + Math.max(r.moved, 0), 0);
+    const pxPerSec = dt > 0.2 ? Math.round(totalMoved / dt) : 0;
+    return { method: 'wheel+scroll+drag', moved: totalMoved, pxPerSec };
+  };
+  return runPhases().then(drive => {
     collector.stop();
     return { frames: collector.frames, ...drive };
   });
@@ -400,7 +506,8 @@ function frameStats(frames) {
   const total = frames.reduce((a, b) => a + b, 0);
   const avgFps = (frames.length / total) * 1000;
   const sorted = [...frames].sort((a, b) => b - a);
-  const p99 = sorted[Math.max(0, Math.floor(frames.length * 0.01) - 1)] ?? sorted[0];
+  const p99 =
+    sorted[Math.max(0, Math.floor(frames.length * 0.01) - 1)] ?? sorted[0];
   const worst = sorted[0];
   // 1% low FPS：取最差 1% 帧的平均帧耗时换算 FPS
   const worstN = Math.max(1, Math.floor(frames.length * 0.01));
@@ -423,12 +530,16 @@ async function main() {
   build();
   const { server, port } = await startStaticServer();
 
-  console.log('[3/4] 启动 chromium（headed 模式，接近真实浏览器体感）执行测试...');
+  console.log(
+    '[3/4] 启动 chromium（headed 模式，接近真实浏览器体感）执行测试...',
+  );
   const browser = await chromium.launch({
     headless: false,
     args: ['--enable-precise-memory-info'],
   });
-  const page = await browser.newPage({ viewport: { width: 1600, height: 1000 } });
+  const page = await browser.newPage({
+    viewport: { width: 1600, height: 1000 },
+  });
   page.on('pageerror', e => console.warn('  [pageerror]', e.message));
   await page.goto(`http://127.0.0.1:${port}/`, { waitUntil: 'load' });
   await page.waitForSelector('.tab-btn');
@@ -451,15 +562,18 @@ async function main() {
     await buttons[i].click();
     await page.waitForTimeout(300);
     const hasTable = await page.evaluate(() => {
-      const root = document.querySelector('.tab-panel')?.parentElement || document.body;
+      const root =
+        document.querySelector('.tab-panel')?.parentElement || document.body;
       if (root.querySelector('canvas')) return true;
       // 特例：element TableV2 / stk-table 的滚动容器是 overflow:hidden，无法用通用规则检测
-      if (root.querySelector('.el-table-v2__main .el-vl__wrapper > div')) return true;
+      if (root.querySelector('.el-table-v2__main .el-vl__wrapper > div'))
+        return true;
       if (root.querySelector('.stk-table')) return true;
       const cands = [...root.querySelectorAll('*')].filter(el => {
         const s = getComputedStyle(el);
         return (
-          /(auto|scroll|overlay)/.test(s.overflowY) && el.scrollHeight - el.clientHeight > 50
+          /(auto|scroll|overlay)/.test(s.overflowY) &&
+          el.scrollHeight - el.clientHeight > 50
         );
       });
       return cands.length > 0;
@@ -478,7 +592,9 @@ async function main() {
     process.stdout.write(`  测试 ${label.padEnd(16)}`);
 
     await page.evaluate(() => (window.__longTasks.length = 0));
-    const heap0 = await page.evaluate(() => performance.memory?.usedJSHeapSize || 0);
+    const heap0 = await page.evaluate(
+      () => performance.memory?.usedJSHeapSize || 0,
+    );
 
     // --- 渲染测试 ---
     const t0 = Date.now();
@@ -526,19 +642,29 @@ async function main() {
       console.warn(`  ⚠ ${label}: 滚动容器未实际滚动，FPS 数据无效`);
     }
 
-    const heap1 = await page.evaluate(() => performance.memory?.usedJSHeapSize || 0);
+    const heap1 = await page.evaluate(
+      () => performance.memory?.usedJSHeapSize || 0,
+    );
 
     const sum = arr => Math.round(arr.reduce((a, b) => a + b, 0));
-    const usability = USABILITY[label] || { fixed: 0, rowHeight: 0, hVirtual: 0 };
+    const usability = USABILITY[label] || {
+      fixed: 0,
+      rowHeight: 0,
+      hVirtual: 0,
+    };
+    usability.noBlank = usability.noBlank !== undefined
+      ? usability.noBlank
+      : (roundBlanks.length === 0 ? 1 : 0);
     results.push({
       table: label,
+      renderType: RENDER_TYPE[label] || 'Vue DOM',
       version,
       renderMs,
       firstPaintMs: Math.round(render.firstPaint),
       domNodes: render.nodes,
       renderLongTaskMs: sum(ltRender),
       scrollMethod: method,
-      scrolledPx: moved,
+      scrolledPx: Math.round(moved),
       pxPerSec: roundPxs.length ? Math.round(median(roundPxs)) : '-',
       blankPct: roundBlanks.length ? +median(roundBlanks).toFixed(1) : '-',
       avgFps: stats?.avgFps ?? '-',
@@ -573,7 +699,7 @@ async function main() {
       '实际滚动(px)': r.scrolledPx,
       '无白屏速度(px/s)': r.pxPerSec,
       '白屏率(%)': r.blankPct,
-      '平均FPS': r.avgFps,
+      平均FPS: r.avgFps,
       '1%low FPS': r.lowFps1pct,
       'p99帧(ms)': r.p99FrameMs,
       '最差帧(ms)': r.worstFrameMs,
@@ -581,7 +707,11 @@ async function main() {
       '滚动长任务(ms)': r.scrollLongTaskMs,
       '堆增量(MB)': r.heapDeltaMB,
       '可用性(x/4)':
-        r.usability.fixed + r.usability.rowHeight + r.usability.hVirtual + r.usability.width + '/4',
+        r.usability.fixed +
+        r.usability.rowHeight +
+        r.usability.hVirtual +
+        r.usability.width +
+        '/4',
       '易用性(x/5)': (r.easeOfUse && r.easeOfUse.score) || '-',
     })),
   );
@@ -596,10 +726,16 @@ async function main() {
   for (const [key, name] of USABILITY_DIMS) {
     const ok = results.filter(r => r.usability[key] === 1).length;
     const part = results.filter(r => r.usability[key] === 0.5).length;
-    console.log(`  可用性·${name}: 支持 ${ok}/${results.length}，部分 ${part}/${results.length}`);
+    console.log(
+      `  可用性·${name}: 支持 ${ok}/${results.length}，部分 ${part}/${results.length}`,
+    );
   }
-  const easeAvg = (results.reduce((s, r) => s + (r.easeOfUse?.score || 0), 0) / results.length).toFixed(1);
-  console.log(`  易用性·主观评分: 平均 ${easeAvg}/5（最高 ${Math.max(...results.map(r => r.easeOfUse?.score || 0))}）`);
+  const easeAvg = (
+    results.reduce((s, r) => s + (r.easeOfUse?.score || 0), 0) / results.length
+  ).toFixed(1);
+  console.log(
+    `  易用性·主观评分: 平均 ${easeAvg}/5（最高 ${Math.max(...results.map(r => r.easeOfUse?.score || 0))}）`,
+  );
 
   const jsonPath = path.join(__dirname, 'perf-results.json');
   const reportPath = path.join(__dirname, 'perf-report.html');
@@ -608,7 +744,10 @@ async function main() {
 
   // 由模板生成 HTML 报告（内联数据，单文件即可打开）
   // 注意：替换内容用函数形式避免 $&/$$ 特殊模式；replaceAll 保证注释中的占位符也一并替换
-  const template = await readFile(path.join(__dirname, 'report-template.html'), 'utf-8');
+  const template = await readFile(
+    path.join(__dirname, 'report-template.html'),
+    'utf-8',
+  );
   const html = template
     .replaceAll('__DATA__', () => JSON.stringify(results))
     .replaceAll('__META__', () =>
@@ -624,7 +763,9 @@ async function main() {
   // ---------------- 启动报告服务并打开浏览器 ----------------
   const reportServer = createServer(async (req, res) => {
     try {
-      const pathname = decodeURIComponent(new URL(req.url, 'http://x/').pathname);
+      const pathname = decodeURIComponent(
+        new URL(req.url, 'http://x/').pathname,
+      );
       let filePath = path.join(__dirname, pathname);
       try {
         await readFile(filePath);
@@ -632,7 +773,10 @@ async function main() {
         filePath = reportPath;
       }
       const data = await readFile(filePath);
-      res.setHeader('Content-Type', MIME[path.extname(filePath)] || 'application/octet-stream');
+      res.setHeader(
+        'Content-Type',
+        MIME[path.extname(filePath)] || 'application/octet-stream',
+      );
       res.setHeader('Cache-Control', 'no-store');
       res.end(data);
     } catch (e) {
@@ -645,7 +789,8 @@ async function main() {
   await new Promise((resolve, reject) => {
     const tryListen = port => {
       reportServer.once('error', err => {
-        if (err.code === 'EADDRINUSE' && port < REPORT_PORT + 10) tryListen(port + 1);
+        if (err.code === 'EADDRINUSE' && port < REPORT_PORT + 10)
+          tryListen(port + 1);
         else reject(err);
       });
       reportServer.listen(port, '127.0.0.1', () => {
@@ -665,7 +810,9 @@ async function main() {
       : process.platform === 'darwin'
         ? spawn('open', [reportUrl], { stdio: 'ignore' })
         : spawn('xdg-open', [reportUrl], { stdio: 'ignore' });
-  opener.on('error', () => console.log('自动打开浏览器失败，请手动访问上方地址'));
+  opener.on('error', () =>
+    console.log('自动打开浏览器失败，请手动访问上方地址'),
+  );
 }
 
 main().catch(e => {
