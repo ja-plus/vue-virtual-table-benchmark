@@ -90,6 +90,29 @@
   td.best { color: #389e0d; font-weight: bold; background: #f6ffed; }
   td.worst { color: #cf1322; background: #fff1f0; }
   .table-scroll { overflow-x: auto; }
+  #dataTable th:first-child,
+  #dataTable td:first-child {
+    position: sticky;
+    left: 0;
+    z-index: 1;
+    background: #fff;
+    white-space: nowrap;
+    min-width: 140px;
+  }
+  #dataTable thead th:first-child { background: #fafbfc; }
+  #dataTable tr:hover td:first-child { background: #f5f5f5; }
+  #dataTable td:first-child.best { background: #d9f5dc; }
+  #dataTable td:first-child.worst { background: #ffe7e3; }
+  #dataTable th:first-child::after,
+  #dataTable td:first-child::after {
+    content: '';
+    position: absolute;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    width: 4px;
+    background: linear-gradient(to right, rgba(0,0,0,0.06), transparent);
+  }
   /* ---- 可用性对比 ---- */
   .usability-stats { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 14px; }
   .u-stat {
@@ -295,7 +318,7 @@
     { key: 'renderMs', name: '渲染速度', lower: true },
     { key: 'usability.featureScore', name: '功能丰富度', lower: false },
     { key: 'avgFps', name: '平均FPS', lower: false },
-    { key: 'lowFps1pct', name: '1%low FPS', lower: false },
+    { key: 'contentUpdateRate', name: '内容更新频次', lower: false },
     { key: 'droppedFrames', name: '掉帧控制', lower: true },
     { key: 'easeOfUse.score', name: '易用性', lower: false },
   ];
@@ -333,7 +356,7 @@
   var radarChart = echarts.init(document.getElementById('radar'));
   radarChart.setOption({
     tooltip: {
-      // 排名信息移入 tooltip，indicator 保持静态，切换时才走位置插值动画
+      // tooltip 展示详细得分与排名，indicator 显示当前表格各维度排名
       formatter: function () {
         var i = curIdx;
         var lines = ['<b>' + names[i] + (DATA[i].version ? '@' + DATA[i].version : '') + '</b>'];
@@ -344,7 +367,7 @@
       },
     },
     radar: {
-      indicator: DIMS.map(function (d) { return { name: d.name, max: 100 }; }),
+      indicator: DIMS.map(function (d, di) { return { name: d.name + '  ' + rankTable[0][di] + '/' + DATA.length, max: 100 }; }),
       center: ['50%', '50%'],
       radius: '60%',
       splitArea: { areaStyle: { opacity: 0.3 } },
@@ -387,8 +410,13 @@
   function showRadar(i) {
     curIdx = i;
     var c = colorOf(i);
-    // 只更新 series 数据，indicator 保持静态（排名信息在 tooltip 中），雷达图从上一形态直接插值到下一形态
+    // 更新 indicator 显示当前表格各维度排名，series.data 不含 name 以保持形态插值动画
     radarChart.setOption({
+      radar: {
+        indicator: DIMS.map(function (d, di) {
+          return { name: d.name + '  ' + rankTable[i][di] + '/' + DATA.length, max: 100 };
+        }),
+      },
       series: [
         {
           type: 'radar',

@@ -368,9 +368,10 @@ const runScrollSession = args => {
       stop: () => {
         stopped = true;
         observer.disconnect();
-        // canvas 表格（如 canvas-vue-table）直接在 canvas 上重绘，DOM 全程无变更：
-        // 检测不到任何 mutation 且面板内存在 canvas 时，按每帧都重绘兜底处理（内容更新率≈帧率）
-        if (mutations === 0 && getPanelRoot()?.querySelector('canvas')) {
+        // canvas 表格（VTable、canvas-vue-table）主体内容在 canvas 上逐帧重绘，
+        // DOM mutation 仅来自 wrapper transform 或 overlay 等辅助元素，严重低于实际重绘频次。
+        // 只要面板内存在 canvas，内容更新次数应以帧数为准（内容更新率 ≈ 帧率）
+        if (getPanelRoot()?.querySelector('canvas')) {
           return frames.length;
         }
         return contentFrames;
